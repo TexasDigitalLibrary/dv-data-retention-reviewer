@@ -29,6 +29,10 @@ with open(configfile) as envfile:
 
 
 #if outputs directory does not yet exist, create it
+if not os.path.isdir("outputs"):
+    os.mkdir("outputs")
+
+#if outputs directory does not yet exist, create it
 if not os.path.isdir("./outputs/" + datetime.now().strftime("%Y-%m-%d")):
     os.mkdir("outputs/" + datetime.now().strftime("%Y-%m-%d"))
     print("outputs/" + datetime.now().strftime("%Y-%m-%d") + " has been created successfully")
@@ -142,7 +146,7 @@ if config["processdeaccessioneddatasets"] == "True":
 
     deaccessioneddatasetcounter = 0
     currentpageofresults = 0
-    pagecount = 9999
+    pagecount = config['paginationlimit']
 
     while currentpageofresults < pagecount:
 
@@ -198,6 +202,7 @@ if config["processdeaccessioneddatasets"] == "True":
 
         except Exception as e:
             writelog(str(e))
+            break
 
     with open("outputs/" + datetime.now().strftime("%Y-%m-%d") + "/all_results_summary.txt", "a") as resultssummaryfile:
         resultssummaryfile.write("   DEACCESSIONED DATASETS\n")
@@ -230,9 +235,9 @@ while currentpageofresults < pagecount:
     try:
         currentpageofresults += 1
 
-        writelog("https://dataverse.tdl.org/api/search?q=*&subtree=utexas&fq=publicationStatus:Published&type=dataset")
+        writelog("https://dataverse.tdl.org/api/search?q=*&subtree="+config['institutionaldataverse'] +"&fq=publicationStatus:Published&type=dataset")
 
-        publisheddatasetlist = requests.get("https://dataverse.tdl.org/api/search?q=*&subtree=utexas&fq=publicationStatus:Published&type=dataset", headers={"X-Dataverse-key":config['dataverse_api_key']})
+        publisheddatasetlist = requests.get("https://dataverse.tdl.org/api/search?q=*&subtree=" + config['institutionaldataverse'] +"&fq=publicationStatus:Published&type=dataset", headers={"X-Dataverse-key":config['dataverse_api_key']})
 
         publisheddata = json.loads(publisheddatasetlist.text)['data']
 
@@ -587,7 +592,7 @@ if config["processpublisheddatasets"] == "True":
 
 
 
-                if "University of Texas at Austin Dataverse Collection" not in str(metadata['data']['schema:isPartOf']) and config['institutionaldataverse'] != "*":
+                if config['institutionname'] + " Dataverse Collection" not in str(metadata['data']['schema:isPartOf']) and config['institutionaldataverse'] != "*":
                     writelog(spacing + " skipping dataset because it is in not in the " + config['institutionaldataverse'] + " dataverse")
 
 

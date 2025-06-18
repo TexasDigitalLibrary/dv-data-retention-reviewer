@@ -61,13 +61,13 @@ totaldatasetsindataverseovertenyearsoldandoverfivegb = 0
 
 
 #define file paths for all output CSV files
-publishedneedsreviewcsvpath = "outputs/" + datetime.now().strftime("%Y-%m-%d") + "/stage3-needsreview-published-list-" + datetime.now().strftime("%Y-%m-%d") + "-ut-austin.csv"
-unpublishedneedsreviewcsvpath = "outputs/" + datetime.now().strftime("%Y-%m-%d") + "/stage3-needsreview-unpublished-list-" + datetime.now().strftime("%Y-%m-%d") + "-ut-austin.csv"
-publishedmitigatingfactorcsvpath = "outputs/" + datetime.now().strftime("%Y-%m-%d") + "/stage2-mitigatingfactor-published-list-" + datetime.now().strftime("%Y-%m-%d") + "-ut-austin.csv"
-publishednoreviewneededcsvpath = "outputs/" + datetime.now().strftime("%Y-%m-%d") + "/stage1-passed-published-list-" + datetime.now().strftime("%Y-%m-%d") + "-ut-austin.csv"
-unpublishednoreviewneededcsvpath = "outputs/" + datetime.now().strftime("%Y-%m-%d") + "/stage1-passed-unpublished-list-" + datetime.now().strftime("%Y-%m-%d") + "-ut-austin.csv"
-couldnotbeevaluatedcsvpath = "outputs/" + datetime.now().strftime("%Y-%m-%d") + "/could-not-be-evaluated-" + datetime.now().strftime("%Y-%m-%d") + "-ut-austin.csv"
-deaccessionedcsvpath = "outputs/" + datetime.now().strftime("%Y-%m-%d") + "/deaccessioned-" + datetime.now().strftime("%Y-%m-%d") + "-ut-austin.csv"
+publishedneedsreviewcsvpath = "outputs/" + datetime.now().strftime("%Y-%m-%d") + "/stage3-needsreview-published-list-" + datetime.now().strftime("%Y-%m-%d") + "-" + str(config['institutionaldataverse']) + ".csv"
+unpublishedneedsreviewcsvpath = "outputs/" + datetime.now().strftime("%Y-%m-%d") + "/stage3-needsreview-unpublished-list-" + datetime.now().strftime("%Y-%m-%d") + "-" + str(config['institutionaldataverse']) + ".csv"
+publishedmitigatingfactorcsvpath = "outputs/" + datetime.now().strftime("%Y-%m-%d") + "/stage2-mitigatingfactor-published-list-" + datetime.now().strftime("%Y-%m-%d") + "-" + str(config['institutionaldataverse']) + ".csv"
+publishednoreviewneededcsvpath = "outputs/" + datetime.now().strftime("%Y-%m-%d") + "/stage1-passed-published-list-" + datetime.now().strftime("%Y-%m-%d") + "-" + str(config['institutionaldataverse']) + ".csv"
+unpublishednoreviewneededcsvpath = "outputs/" + datetime.now().strftime("%Y-%m-%d") + "/stage1-passed-unpublished-list-" + datetime.now().strftime("%Y-%m-%d") + "-" + str(config['institutionaldataverse']) + ".csv"
+couldnotbeevaluatedcsvpath = "outputs/" + datetime.now().strftime("%Y-%m-%d") + "/could-not-be-evaluated-" + datetime.now().strftime("%Y-%m-%d") + "-" + str(config['institutionaldataverse']) + ".csv"
+deaccessionedcsvpath = "outputs/" + datetime.now().strftime("%Y-%m-%d") + "/deaccessioned-" + datetime.now().strftime("%Y-%m-%d") + "-" + str(config['institutionaldataverse']) + ".csv"
 
 
 #set output csv header row column names and write header rows to output csvs
@@ -782,7 +782,7 @@ if config["processpublisheddatasets"] == "True":
 
                     except Exception as e:
                         writelog(str(e))
-                        writelog("   Dataset is in the UT Austin dataverse but privileges are insufficient for retrieving dataset size")
+                        writelog("   Dataset is in the "+ str(config['institutionaldataverse']).upper() +" dataverse but privileges are insufficient for retrieving dataset size")
                         writerowtocsv(couldnotbeevaluatedcsvpath, datasetdetailsrow, "a")
                         insufficientprivilegestoprocesscount += 1
 
@@ -847,3 +847,13 @@ with open("outputs/" + datetime.now().strftime("%Y-%m-%d") + "/all_results_summa
     resultssummaryfile.write("\n")
     resultssummaryfile.write("   RUN TIME\n")
     resultssummaryfile.write("        minutes elapsed = "+ m + ":" + sstr + "  \n")
+
+    writelog("")
+    writelog("PROCESSING COMPLETED SUCCCESSFULLY")
+    writelog("      total datasets evaluated: " + str(processedpublisheddatasets) + "\n")
+    writelog("      stage 1 pass count: " + str(passcount) + "\n")
+    writelog("      stage 2 mitigating factor dataset count: " + str(mitigatingfactordatasetcount) + "\n")
+    writelog("      stage 3 needs review count: " + str(needsreviewcount) + "\n")
+    writelog("      insufficient privileges to process: " + str(insufficientprivilegestoprocesscount) + "\n")
+    writelog("")
+    writelog("      minutes elapsed = "+ m + ":" + sstr + "  \n")

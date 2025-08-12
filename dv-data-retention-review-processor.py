@@ -289,7 +289,7 @@ if config["processunpublisheddatasets"] == "True":
 
     ROLE_IDS = str(1) #admin role
     DVOBJECT_TYPES="Dataset"
-    PUBLISHED_STATES="Unpublished"
+    PUBLISHED_STATES="Draft"
 
     
     unpublisheddatasetcounter = 0

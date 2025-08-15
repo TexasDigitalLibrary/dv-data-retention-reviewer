@@ -272,7 +272,7 @@ if config["processdeaccessioneddatasets"] == "True":
     #     resultssummaryfile.write("   DEACCESSIONED DATASETS\n")
     #     resultssummaryfile.write("        number evaluated: " + str(deaccessioneddatasetcounter) + "\n\n")
 
-writelog("\nFINISHED PROCESSING DEACCESSIONED DATASETS\n\n")
+    writelog("\nFINISHED PROCESSING DEACCESSIONED DATASETS\n\n")
 
 
 
@@ -348,32 +348,81 @@ if config["processpublisheddatasets"] == "True":
 #RETRIEVE INFORMATION ABOUT UNPUBLISHED DATASETS
 if config["processunpublisheddatasets"] == "True":
 
-    writelog("STARTING TO PROCESS UNPUBLISHED DATASETS \n\n")
+    # writelog("STARTING TO PROCESS UNPUBLISHED DATASETS \n\n")
 
-    ROLE_IDS = str(1) #admin role
-    DVOBJECT_TYPES="Dataset"
-    PUBLISHED_STATES="Draft"
+    # ROLE_IDS = str(1) #admin role
+    # DVOBJECT_TYPES="dataset"
+    # PUBLISHED_STATES="Draft"
 
     
+    # unpublisheddatasetcounter = 0
+    # passcount = 0
+    # needsreviewcount = 0
+    # currentpageofresults = 0
+    # pagecount = config['paginationlimit']
+    # pageincrement = config['pageincrement']
+    # pagesize = config['pagesize']
+
+    # while currentpageofresults < pagecount:
+
+    #     try:
+    #         currentpageofresults += 1
+
+    #         unpublisheddataqueryurl = f"https://dataverse.tdl.org/api/search?q=*&subtree={config['institutionaldataverse']}&start={currentpageofresults}&per_page={pagesize}&page={pageincrement}&fq=publicationStatus:{PUBLISHED_STATES}&type={DVOBJECT_TYPES}"
+
+    #         writelog(unpublisheddataqueryurl)
+
+    #         unpublisheddatasetlist = requests.get(unpublisheddataqueryurl, headers={"X-Dataverse-key":config['dataverse_api_key']})
+
+    #         unpublisheddata = json.loads(unpublisheddatasetlist.text)['data']
+
+    #         print(f"\nRetrieving {len(unpublisheddata['items'])} {PUBLISHED_STATES} datasets...\n")
+
+    writelog("STARTING TO PROCESS UNPUBLISHED DATASETS \n\n")
+
+    ROLE_IDS = str(1)  # admin role
+    DVOBJECT_TYPES = "dataset"
+    PUBLISHED_STATES = "Draft"
+
     unpublisheddatasetcounter = 0
     passcount = 0
     needsreviewcount = 0
     currentpageofresults = 0
-    pagecount = 9999
+    pagesize = config['pagesize']
+    pageincrement = config['pageincrement']
+    unpublisheddata = [] #creating empty list to store all results
 
-    while currentpageofresults < pagecount:
-
+    while True:
         try:
-            currentpageofresults += 1
-
-            unpublisheddataqueryurl = f"https://dataverse.tdl.org/api/search?q=*&subtree={config['institutionaldataverse']}&start={currentpageofresults}&per_page={pagesize}&page={pageincrement}&fq=publicationStatus:Deaccessioned&type=dataset"
+            unpublisheddataqueryurl = f"https://dataverse.tdl.org/api/search?q=*&subtree={config['institutionaldataverse']}&start={currentpageofresults}&per_page={pagesize}&page={pageincrement}&fq=publicationStatus:{PUBLISHED_STATES}&type={DVOBJECT_TYPES}"
 
             writelog(unpublisheddataqueryurl)
 
             unpublisheddatasetlist = requests.get(unpublisheddataqueryurl, headers={"X-Dataverse-key":config['dataverse_api_key']})
-            unpublisheddata = json.loads(unpublisheddatasetlist.text)['data']
-            print(f"\nRetrieving {len(unpublisheddata['items'])} {PUBLISHED_STATES} datasets...\n")
+            response = unpublisheddatasetlist.json()
 
+            if not response.get('data') or not response['data'].get('items'):
+                print("No data found or no more items.")
+                break
+
+            items = response['data']['items']
+            total_count = response['data']['total_count']
+            total_pages = math.ceil(total_count / pagesize)
+            current_page = (currentpageofresults // pagesize) + 1
+
+            writelog(f"Retrieved {len(items)} items from page {current_page} of {total_pages}")
+
+            unpublisheddata.extend(items)
+
+            currentpageofresults += pagesize
+            if currentpageofresults >= total_count:
+                writelog(f"NUMBER OF UNPUBLISHED RESULTS ACCESSIBLE UNDER USER ROLE STATUS: {total_count}")
+                break
+        except Exception as e:
+            writelog(str(e))   
+        
+    print(unpublisheddata) 
+                
             # writelog("https://dataverse.tdl.org/api/mydata/retrieve?role_ids=" + ROLE_IDS + "&dvobject_types=" +DVOBJECT_TYPES + "&published_states=" +PUBLISHED_STATES + "&selected_page=" + str(currentpageofresults))
             
             # unpublisheddatasetlist = requests.get("https://dataverse.tdl.org/api/mydata/retrieve?role_ids=" + ROLE_IDS + "&dvobject_types=" + DVOBJECT_TYPES + "&published_states=" + PUBLISHED_STATES + "&selected_page=" + str(currentpageofresults), headers={"X-Dataverse-key":config['dataverse_api_key']})
@@ -384,118 +433,138 @@ if config["processunpublisheddatasets"] == "True":
 
             # pagecount = unpublisheddata['pagination']['pageCount']
 
-            if currentpageofresults == 1:
-                writelog("NUMBER OF UNPUBLISHED RESULTS ACCESSIBLE UNDER USER ROLE STATUS "+ ROLE_IDS +": " + str(unpublisheddata['pagination']['numResults']))
+            # if currentpageofresults == 1:
+            #     writelog("NUMBER OF UNPUBLISHED RESULTS ACCESSIBLE UNDER USER ROLE STATUS "+ ROLE_IDS +": " + str(unpublisheddata['pagination']['numResults']))
 
 
-            for unpublisheddatasetsprocessedcount, unpublisheddatasetinfo in enumerate(unpublisheddata['items']):
+    for unpublisheddatasetsprocessedcount, unpublisheddatasetinfo in enumerate(unpublisheddata):
 
-            # doi,title,author,author contact email,latest version state,date deposited,date published,date distributed,years since deposit,years since publication,years since distribution,size(GB),unique downloads,citation count,funding,exemption notes
+    # doi,title,author,author contact email,latest version state,date deposited,date published,date distributed,years since deposit,years since publication,years since distribution,size(GB),unique downloads,citation count,funding,exemption notes
 
-                # writelog("CREATED: " + str(unpublisheddatasetinfo['createdAt']))
-                # writelog("UPDATED: " + str(unpublisheddatasetinfo['updatedAt']))
-                unpublisheddatasetcounter += 1
-                writelog("#" + str(unpublisheddatasetcounter) + " UNPUBLISHED DATASET")
-                for k,v in unpublisheddatasetinfo.items():
-                    writelog(k + ": "+ str(v))
-
-
-                doi = unpublisheddatasetinfo['global_id']
-                # entityid = unpublisheddatasetinfo['entity_id'] #only for MyData endpoint
-                title = unpublisheddatasetinfo['name']
-                author = str(unpublisheddatasetinfo['authors'])
-                authorcontactemail = ""
-                datecreated = str(unpublisheddatasetinfo['createdAt'])
-                datelastupdated = str(unpublisheddatasetinfo['updatedAt'])
-                yearssincecreation = ""
-                yearssincelastupdated = ""
-                datasetsizevaluegb = ""
-                fundinginfo = ""
-                datalicense = ""
-                latestversionstate = ""
-                exemptionnotes = ""
+        # writelog("CREATED: " + str(unpublisheddatasetinfo['createdAt']))
+        # writelog("UPDATED: " + str(unpublisheddatasetinfo['updatedAt']))
+        unpublisheddatasetcounter += 1
+        writelog("#" + str(unpublisheddatasetcounter) + " UNPUBLISHED DATASET")
+        for k,v in unpublisheddatasetinfo.items():
+            writelog(k + ": "+ str(v))
 
 
-                try:
-                    citationcount = str(len(citations['data']))
-
-                except:
-                    citationcount = 0
-
-
-                # datetimeofmostrecentupdate = datetime.strptime(repo['updated_at'], '%Y-%m-%dT%H:%M:%SZ')
-
-                # monthssincemostrecentupdate = float(relativedelta(datetime.now(), datetime(yearofmostrecentupdate,monthofmostrecentupdate,dayofmostrecentupdate,0,0,0,0)).months)
-
-
-                creationyear = int(datecreated.lower().split("t")[0].split("-")[0])
-                creationmonth = int(datecreated.lower().split("t")[0].split("-")[1])
-                creationday = int(datecreated.lower().split("t")[0].split("-")[2])
-
-                writelog("creationyear = " + str(creationyear))
-                writelog("creationmonth = " + str(creationmonth))
-                writelog("creationday = " + str(creationday))
-
-                yearssincecreation = float(relativedelta(datetime.now(), datetime(creationyear,creationmonth,creationday,0,0,0,0)).years + (relativedelta(datetime.now(), datetime(creationyear,creationmonth,creationday,0,0,0,0)).months/12) + (relativedelta(datetime.now(), datetime(creationyear,creationmonth,creationday,0,0,0,0)).days/365))
-
-                writelog("yearssincecreation = " + str(yearssincecreation))
+        doi = unpublisheddatasetinfo['global_id']
+        # entityid = unpublisheddatasetinfo['entity_id'] #only for MyData endpoint
+        title = unpublisheddatasetinfo['name']
+        author = str(unpublisheddatasetinfo['authors'])
+        authorcontactemail = ""
+        datecreated = str(unpublisheddatasetinfo['createdAt'])
+        datelastupdated = str(unpublisheddatasetinfo['updatedAt'])
+        yearssincecreation = ""
+        yearssincelastupdated = ""
+        datasetsizevaluegb = ""
+        fundinginfo = ""
+        datalicense = ""
+        latestversionstate = ""
+        exemptionnotes = ""
 
 
-                lastupdatedyear = int(datecreated.lower().split("t")[0].split("-")[0])
-                lastupdatedmonth = int(datecreated.lower().split("t")[0].split("-")[1])
-                lastupdatedday = int(datecreated.lower().split("t")[0].split("-")[2])
+            #     try:
+            #         citationcount = str(len(citations['data']))
 
-                writelog("lastupdatedyear = " + str(lastupdatedyear))
-                writelog("lastupdatedmonth = " + str(lastupdatedmonth))
-                writelog("lastupdatedday = " + str(lastupdatedday))
-
-                yearssincelastupdated = float(relativedelta(datetime.now(), datetime(lastupdatedyear,lastupdatedmonth,lastupdatedday,0,0,0,0)).years + (relativedelta(datetime.now(), datetime(lastupdatedyear,lastupdatedmonth,lastupdatedday,0,0,0,0)).months/12) + (relativedelta(datetime.now(), datetime(creationyear,creationmonth,creationday,0,0,0,0)).days/365))
-
-                writelog("yearssincelastupdated = " + str(yearssincelastupdated))
+            #     except:
+            #         citationcount = 0
 
 
-                datasetsizerequest = requests.get("https://dataverse.tdl.org/api/datasets/" + str(entityid) + "/storagesize", headers={"X-Dataverse-key":config['dataverse_api_key']})
-                datasizemessage = str(json.loads(datasetsizerequest.text)['data'])
-                datasetsizevaluegb = float(int(datasizemessage.split("dataset:")[1].split(" bytes")[0].strip().replace(",","")) / 1000000000)
-                writelog("size = " + str(round(datasetsizevaluegb,3) + " GB"))
+            #     # datetimeofmostrecentupdate = datetime.strptime(repo['updated_at'], '%Y-%m-%dT%H:%M:%SZ')
+
+            #     # monthssincemostrecentupdate = float(relativedelta(datetime.now(), datetime(yearofmostrecentupdate,monthofmostrecentupdate,dayofmostrecentupdate,0,0,0,0)).months)
+
+        creationyear = int(datecreated.lower().split("t")[0].split("-")[0])
+        creationmonth = int(datecreated.lower().split("t")[0].split("-")[1])
+        creationday = int(datecreated.lower().split("t")[0].split("-")[2])
+
+        writelog("creationyear = " + str(creationyear))
+        writelog("creationmonth = " + str(creationmonth))
+        writelog("creationday = " + str(creationday))
+
+        yearssincecreation = float(relativedelta(datetime.now(), datetime(creationyear,creationmonth,creationday,0,0,0,0)).years + (relativedelta(datetime.now(), datetime(creationyear,creationmonth,creationday,0,0,0,0)).months/12) + (relativedelta(datetime.now(), datetime(creationyear,creationmonth,creationday,0,0,0,0)).days/365))
+
+        writelog("yearssincecreation = " + str(yearssincecreation))
 
 
-                datasetinfo = requests.get("https://dataverse.tdl.org/api/datasets/:persistentId/versions/:draft?persistentId=" + doi, headers={"X-Dataverse-key":config['dataverse_api_key']})
-                # writelog(json.loads(datasetinfo.text)['data'])
-                for k,v in json.loads(datasetinfo.text)['data'].items():
-                    if type(v) is dict:
-                        writelog("  " + k)
-                        for k2,v2 in v.items():
-                            if type(v2) is dict:
-                                writelog("     " + k2)
-                                for k3,v3 in v2.items():
-                                    writelog("        " + k3 + ": " + str(v3))
-                            else:
-                                writelog("     " + k2 + ": " + str(v2))
+        lastupdatedyear = int(datecreated.lower().split("t")[0].split("-")[0])
+        lastupdatedmonth = int(datecreated.lower().split("t")[0].split("-")[1])
+        lastupdatedday = int(datecreated.lower().split("t")[0].split("-")[2])
+
+        writelog("lastupdatedyear = " + str(lastupdatedyear))
+        writelog("lastupdatedmonth = " + str(lastupdatedmonth))
+        writelog("lastupdatedday = " + str(lastupdatedday))
+
+        yearssincelastupdated = float(relativedelta(datetime.now(), datetime(lastupdatedyear,lastupdatedmonth,lastupdatedday,0,0,0,0)).years + (relativedelta(datetime.now(), datetime(lastupdatedyear,lastupdatedmonth,lastupdatedday,0,0,0,0)).months/12) + (relativedelta(datetime.now(), datetime(creationyear,creationmonth,creationday,0,0,0,0)).days/365))
+
+        writelog("yearssincelastupdated = " + str(yearssincelastupdated))
+
+
+        # datasetsizerequest = requests.get("https://dataverse.tdl.org/api/datasets/" + str(entityid) + "/storagesize", headers={"X-Dataverse-key":config['dataverse_api_key']})
+        # datasizemessage = str(json.loads(datasetsizerequest.text)['data'])
+        # datasetsizevaluegb = float(int(datasizemessage.split("dataset:")[1].split(" bytes")[0].strip().replace(",","")) / 1000000000)
+        # writelog("size = " + str(round(datasetsizevaluegb,3) + " GB"))
+
+
+        datasetinfo = requests.get("https://dataverse.tdl.org/api/datasets/:persistentId/versions/:draft?persistentId=" + doi, headers={"X-Dataverse-key":config['dataverse_api_key']})
+        writelog(json.loads(datasetinfo.text)['data'])
+        for k,v in json.loads(datasetinfo.text)['data'].items():
+            if type(v) is dict:
+                writelog("  " + k)
+                for k2,v2 in v.items():
+                    if type(v2) is dict:
+                        writelog("     " + k2)
+                        for k3,v3 in v2.items():
+                            writelog("        " + k3 + ": " + str(v3))
                     else:
-                        writelog("  " + k + ": " + str(v))
+                        writelog("     " + k2 + ": " + str(v2))
+            else:
+                writelog("  " + k + ": " + str(v))
+
+        response_data = json.loads(datasetinfo.text)['data']
+        files = response_data.get('files', [])
+        total_filesize_bytes = sum(
+                file.get('dataFile', {}).get('filesize', 0) for file in files
+            )
+        datasetsizevaluegb = round(total_filesize_bytes / (1024 ** 3), 2)
+        writelog(f"     Total File Size (GB): {datasetsizevaluegb}")
+
+        citation = response_data.get('metadataBlocks', {}).get('citation', {})
+        fields = citation.get('fields', [])
+        funderinfo = []
+        for field in fields:
+            if field['typeName'] == 'grantNumber':
+                for grant in field.get('value', []):
+                    grant_number_agency = grant.get('grantNumberAgency', {}).get('value', '')
+                    funderinfo.append(grant_number_agency)
+
+        fundinginfo = "; ".join(funderinfo)
+        contactinfo = []
+        for field in fields:
+            if field['typeName'] == 'datasetContact':
+                for contact in field.get('value', []):
+                    contact_email = contact.get('datasetContactEmail', {}).get('value', '')
+                    contactinfo.append(contact_email)
+        authorcontactemail = "; ".join(contactinfo)
+
+        latestversionstate=response_data.get('latestVersionPublishingState')
+
+        datasetdetailsrow = [doi, title, author, authorcontactemail, latestversionstate, datecreated, datelastupdated, yearssincecreation, yearssincelastupdated, datasetsizevaluegb, fundinginfo, exemptionnotes]
+
+        #unpublished dataset does not need review
+        if yearssincecreation < float(config['unpublisheddatasetreviewthresholdinyears']) and datasetsizevaluegb < float(config['unpublisheddatasetreviewthresholdingb']):
+            writerowtocsv(unpublishednoreviewneededcsvpath, datasetdetailsrow, "a")
+            passcount += 1
 
 
-                datasetdetailsrow = [doi, title, author, authorcontactemail, latestversionstate, datecreated, datelastupdated, yearssincecreation, yearssincelastupdated, datasetsizevaluegb, fundinginfo, exemptionnotes]
+        #unpublished dataset does need to be reviewed
+        else:
+            writerowtocsv(unpublishedneedsreviewcsvpath, datasetdetailsrow, "a")
+            needsreviewcount += 1
 
-                #unpublished dataset does not need review
-                if yearssincecreation < float(config['unpublisheddatasetreviewthresholdinyears']) and datasetsizevaluegb < float(config['unpublisheddatasetreviewthresholdingb']):
-                    writerowtocsv(unpublishednoreviewneededcsvpath, datasetdetailsrow, "a")
-                    passcount += 1
-    
-
-                #unpublished dataset does need to be reviewed
-                else:
-                    writerowtocsv(unpublishedneedsreviewcsvpath, datasetdetailsrow, "a")
-                    needsreviewcount += 1
-
-                writelog("\n\n")
-
-
-
-
-        except Exception as e:
-            writelog(str(e))
+        writelog("\n\n")
 
 
     with open("outputs/" + datetime.now().strftime("%Y-%m-%d") + "/all_results_summary.txt", "a") as resultssummaryfile:

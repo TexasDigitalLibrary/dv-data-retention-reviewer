@@ -27,6 +27,10 @@ configfile = ".env"
 with open(configfile) as envfile:
     config = json.loads(envfile.read())
 
+#load API key
+headers_dataverse = {
+    'X-Dataverse-key': config['dataverse_api_key']
+}
 
 #if outputs directory does not yet exist, create it
 if not os.path.isdir("outputs"):
@@ -147,66 +151,126 @@ if config["processdeaccessioneddatasets"] == "True":
     deaccessioneddatasetcounter = 0
     currentpageofresults = 0
     pagecount = config['paginationlimit']
+    pageincrement = config['pageincrement']
+    pagesize = config['pagesize']
 
-    while currentpageofresults < pagecount:
+    try:
+        #substituting search endpoint
+        deaccessionedqueryurl = f"https://dataverse.tdl.org/api/search?q=*&subtree={config['institutionaldataverse']}&start={currentpageofresults}&per_page={pagesize}&page={pageincrement}&fq=publicationStatus:Deaccessioned&type=dataset"
 
-        try:
-            currentpageofresults += 1
+        writelog(deaccessionedqueryurl)
 
-            deaccessionedqueryurl = "https://dataverse.tdl.org/api/mydata/retrieve?role_ids=" + ROLE_IDS + "&dvobject_types=" +DVOBJECT_TYPES + "&published_states=" +PUBLISHED_STATES + "&selected_page=" + str(currentpageofresults)
+        deaccessioneddatasetlist = requests.get(deaccessionedqueryurl, headers={"X-Dataverse-key":config['dataverse_api_key']})
+        deaccessioneddata = json.loads(deaccessioneddatasetlist.text)['data']
+        print(f"\nRetrieving {len(deaccessioneddata['items'])} {PUBLISHED_STATES} datasets...\n")
+        if currentpageofresults == 1:
+            writelog("NUMBER OF DEACCESSIONED RESULTS: " + str(deaccessioneddata['total_count']))
 
-            writelog(deaccessionedqueryurl)
+        for deaccessioneddatasetsprocessedcount, deaccessioneddatasetinfo in enumerate(json.loads(deaccessioneddatasetlist.text)['data']['items']):
 
-            deaccessioneddatasetlist = requests.get(deaccessionedqueryurl, headers={"X-Dataverse-key":config['dataverse_api_key']})
+            writelog("#" + str(deaccessioneddatasetsprocessedcount) + " DEACCESSIONED DATASET")
+            deaccessioneddatasetcounter += 1
 
-            deaccessioneddata = json.loads(deaccessioneddatasetlist.text)['data']
+            for k,v in deaccessioneddatasetinfo.items():
+                writelog("   " + k + ": "+ str(v))
 
-            pagecount = deaccessioneddata['pagination']['pageCount']
+            doi = deaccessioneddatasetinfo['global_id']
+            # entityid = deaccessioneddatasetinfo['entity_id'] #only available via MyData endpoint
+            title = deaccessioneddatasetinfo['name']
+            author = str(deaccessioneddatasetinfo['authors'])
+            authorcontactemail = ""
+            datecreated = str(deaccessioneddatasetinfo['createdAt'])
+            datelastupdated = str(deaccessioneddatasetinfo['updatedAt'])
+            yearssincecreation = ""
+            yearssincelastupdated = ""
+            datasetsizevaluegb = ""
+            fundinginfo = ""
+            datalicense = ""
+            latestversionstate = ""
+            exemptionnotes = ""
+            status = deaccessioneddatasetinfo['versionState']
+            deaccessionreason = deaccessioneddatasetinfo['deaccession_reason']
 
-            if currentpageofresults == 1:
-                writelog("NUMBER OF DEACCESSIONED RESULTS: " + str(deaccessioneddata['pagination']['numResults']))
+            writelog("\n\n")
 
-
-            for deaccessioneddatasetsprocessedcount, deaccessioneddatasetinfo in enumerate(json.loads(deaccessioneddatasetlist.text)['data']['items']):
-
-                writelog("#" + str(deaccessioneddatasetsprocessedcount) + " DEACCESSIONED DATASET")
-                deaccessioneddatasetcounter += 1
-
-                for k,v in deaccessioneddatasetinfo.items():
-                    writelog("   " + k + ": "+ str(v))
-
-                doi = deaccessioneddatasetinfo['global_id']
-                entityid = deaccessioneddatasetinfo['entity_id']
-                title = deaccessioneddatasetinfo['name']
-                author = str(deaccessioneddatasetinfo['authors'])
-                authorcontactemail = ""
-                datecreated = str(deaccessioneddatasetinfo['createdAt'])
-                datelastupdated = str(deaccessioneddatasetinfo['updatedAt'])
-                yearssincecreation = ""
-                yearssincelastupdated = ""
-                datasetsizevaluegb = ""
-                fundinginfo = ""
-                datalicense = ""
-                latestversionstate = ""
-                exemptionnotes = ""
-                status = deaccessioneddatasetinfo['versionState']
-                deaccessionreason = deaccessioneddatasetinfo['deaccession_reason']
-
-                writelog("\n\n")
-
-                datasetdetailsrow = [doi, title, author, authorcontactemail, latestversionstate, datecreated, datelastupdated, yearssincecreation, yearssincelastupdated, datasetsizevaluegb, fundinginfo, exemptionnotes, status, deaccessionreason]
+            datasetdetailsrow = [doi, title, author, authorcontactemail, latestversionstate, datecreated, datelastupdated, yearssincecreation, yearssincelastupdated, datasetsizevaluegb, fundinginfo, exemptionnotes, status, deaccessionreason]
 
 
-                writerowtocsv(deaccessionedcsvpath, datasetdetailsrow, "a")
+            writerowtocsv(deaccessionedcsvpath, datasetdetailsrow, "a")
+        
+        # currentpageofresults += pagesize
+        # pageincrement += 1
 
-
-        except Exception as e:
-            writelog(str(e))
-            break
+    except Exception as e:
+        print(f"Error processing: {str(e)}")
 
     with open("outputs/" + datetime.now().strftime("%Y-%m-%d") + "/all_results_summary.txt", "a") as resultssummaryfile:
         resultssummaryfile.write("   DEACCESSIONED DATASETS\n")
         resultssummaryfile.write("        number evaluated: " + str(deaccessioneddatasetcounter) + "\n\n")
+
+    # while currentpageofresults < pagecount:
+
+    #     try:
+    #         currentpageofresults += 1
+
+    #         # deaccessionedqueryurl = "https://dataverse.tdl.org/api/mydata/retrieve?role_ids=" + ROLE_IDS + "&dvobject_types=" +DVOBJECT_TYPES + "&published_states=" +PUBLISHED_STATES + "&selected_page=" + str(currentpageofresults)
+
+    #         #substituting search endpoint
+    #         deaccessionedqueryurl = f"https://dataverse.tdl.org/api/search?q=*&subtree={config['institutionaldataverse']}&start={currentpageofresults}&page={pageincrement}&fq=publicationStatus:Deaccessioned&type=dataset"
+
+    #         writelog(deaccessionedqueryurl)
+
+    #         deaccessioneddatasetlist = requests.get(deaccessionedqueryurl, headers={"X-Dataverse-key":config['dataverse_api_key']})
+
+    #         deaccessioneddata = json.loads(deaccessioneddatasetlist.text)['data']
+    #         print(deaccessioneddata['start'])
+
+    #         pagecount = deaccessioneddata['pagination']['pageCount']
+
+    #         if currentpageofresults == 1:
+    #             writelog("NUMBER OF DEACCESSIONED RESULTS: " + str(deaccessioneddata['total_count']))
+
+
+    #         for deaccessioneddatasetsprocessedcount, deaccessioneddatasetinfo in enumerate(json.loads(deaccessioneddatasetlist.text)['data']['items']):
+
+    #             writelog("#" + str(deaccessioneddatasetsprocessedcount) + " DEACCESSIONED DATASET")
+    #             deaccessioneddatasetcounter += 1
+
+    #             for k,v in deaccessioneddatasetinfo.items():
+    #                 writelog("   " + k + ": "+ str(v))
+
+    #             doi = deaccessioneddatasetinfo['global_id']
+    #             entityid = deaccessioneddatasetinfo['entity_id']
+    #             title = deaccessioneddatasetinfo['name']
+    #             author = str(deaccessioneddatasetinfo['authors'])
+    #             authorcontactemail = ""
+    #             datecreated = str(deaccessioneddatasetinfo['createdAt'])
+    #             datelastupdated = str(deaccessioneddatasetinfo['updatedAt'])
+    #             yearssincecreation = ""
+    #             yearssincelastupdated = ""
+    #             datasetsizevaluegb = ""
+    #             fundinginfo = ""
+    #             datalicense = ""
+    #             latestversionstate = ""
+    #             exemptionnotes = ""
+    #             status = deaccessioneddatasetinfo['versionState']
+    #             deaccessionreason = deaccessioneddatasetinfo['deaccession_reason']
+
+    #             writelog("\n\n")
+
+    #             datasetdetailsrow = [doi, title, author, authorcontactemail, latestversionstate, datecreated, datelastupdated, yearssincecreation, yearssincelastupdated, datasetsizevaluegb, fundinginfo, exemptionnotes, status, deaccessionreason]
+
+
+    #             writerowtocsv(deaccessionedcsvpath, datasetdetailsrow, "a")
+
+
+    #     except Exception as e:
+    #         writelog(str(e))
+    #         break
+
+    # with open("outputs/" + datetime.now().strftime("%Y-%m-%d") + "/all_results_summary.txt", "a") as resultssummaryfile:
+    #     resultssummaryfile.write("   DEACCESSIONED DATASETS\n")
+    #     resultssummaryfile.write("        number evaluated: " + str(deaccessioneddatasetcounter) + "\n\n")
 
 writelog("\nFINISHED PROCESSING DEACCESSIONED DATASETS\n\n")
 
@@ -221,60 +285,59 @@ writelog("\nFINISHED PROCESSING DEACCESSIONED DATASETS\n\n")
 #TRY NEW METHOD TO RETRIEVE INFO ABOUT ALL PUBLISHED DATASETS
 
 
-writelog("STARTING NEW METHOD TO PROCESS PUBLISHED DATASETS \n\n")
+if config["processpublisheddatasets"] == "True":
+    writelog("STARTING NEW METHOD TO PROCESS PUBLISHED DATASETS \n\n") 
+    unpublisheddatasetcounter = 0
+    passcount = 0
+    needsreviewcount = 0
+    currentpageofresults = 0
+    pagecount = 2
+
+    while currentpageofresults < pagecount:
+
+        try:
+            currentpageofresults += 1
+
+            writelog("https://dataverse.tdl.org/api/search?q=*&subtree="+config['institutionaldataverse'] +"&fq=publicationStatus:Published&type=dataset")
+
+            publisheddatasetlist = requests.get("https://dataverse.tdl.org/api/search?q=*&subtree=" + config['institutionaldataverse'] +"&fq=publicationStatus:Published&type=dataset", headers={"X-Dataverse-key":config['dataverse_api_key']})
+
+            publisheddata = json.loads(publisheddatasetlist.text)['data']
+
+            totalresults = publisheddata['total_count']
+
+            for dataset in publisheddata['items']:
+                for k,v in dataset.items():
+                    print(k + ": " + str(v))
+            print("\n\n")
 
 
-unpublisheddatasetcounter = 0
-passcount = 0
-needsreviewcount = 0
-currentpageofresults = 0
-pagecount = 2
+        #         total = 
+        # print "=== Page", page, "==="
+        # print "start:", start, " total:", total
+        # for i in data['data']['items']:
+        #     print "- ", i['name'], "(" + i['type'] + ")"
 
-while currentpageofresults < pagecount:
+        #     writelog(publisheddata)
 
-    try:
-        currentpageofresults += 1
+            # pagecount = publisheddata['pagination']['pageCount']
 
-        writelog("https://dataverse.tdl.org/api/search?q=*&subtree="+config['institutionaldataverse'] +"&fq=publicationStatus:Published&type=dataset")
+            # if currentpageofresults == 1:
+            #     writelog("page 1")
 
-        publisheddatasetlist = requests.get("https://dataverse.tdl.org/api/search?q=*&subtree=" + config['institutionaldataverse'] +"&fq=publicationStatus:Published&type=dataset", headers={"X-Dataverse-key":config['dataverse_api_key']})
+            # for publisheddatasetsprocessedcount, publisheddatasetinfo in enumerate(publisheddata['items']):
 
-        publisheddata = json.loads(publisheddatasetlist.text)['data']
+            # # doi,title,author,author contact email,latest version state,date deposited,date published,date distributed,years since deposit,years since publication,years since distribution,size(GB),unique downloads,citation count,funding,exemption notes
 
-        totalresults = publisheddata['total_count']
+            #     # writelog("CREATED: " + str(unpublisheddatasetinfo['createdAt']))
+            #     # writelog("UPDATED: " + str(unpublisheddatasetinfo['updatedAt']))
+            #     publisheddatasetcounter += 1
+            #     writelog("#" + str(publisheddatasetcounter) + " PUBLISHED DATASET")
+            #     for k,v in publisheddatasetinfo.items():
+            #         writelog(k + ": "+ str(v))
 
-        for dataset in publisheddata['items']:
-            for k,v in dataset.items():
-                print(k + ": " + str(v))
-        print("\n\n")
-
-
-    #         total = 
-    # print "=== Page", page, "==="
-    # print "start:", start, " total:", total
-    # for i in data['data']['items']:
-    #     print "- ", i['name'], "(" + i['type'] + ")"
-
-    #     writelog(publisheddata)
-
-        # pagecount = publisheddata['pagination']['pageCount']
-
-        # if currentpageofresults == 1:
-        #     writelog("page 1")
-
-        # for publisheddatasetsprocessedcount, publisheddatasetinfo in enumerate(publisheddata['items']):
-
-        # # doi,title,author,author contact email,latest version state,date deposited,date published,date distributed,years since deposit,years since publication,years since distribution,size(GB),unique downloads,citation count,funding,exemption notes
-
-        #     # writelog("CREATED: " + str(unpublisheddatasetinfo['createdAt']))
-        #     # writelog("UPDATED: " + str(unpublisheddatasetinfo['updatedAt']))
-        #     publisheddatasetcounter += 1
-        #     writelog("#" + str(publisheddatasetcounter) + " PUBLISHED DATASET")
-        #     for k,v in publisheddatasetinfo.items():
-        #         writelog(k + ": "+ str(v))
-
-    except Exception as e:
-        print(str(e))
+        except Exception as e:
+            print(str(e))
 
 
 
@@ -303,15 +366,23 @@ if config["processunpublisheddatasets"] == "True":
         try:
             currentpageofresults += 1
 
-            writelog("https://dataverse.tdl.org/api/mydata/retrieve?role_ids=" + ROLE_IDS + "&dvobject_types=" +DVOBJECT_TYPES + "&published_states=" +PUBLISHED_STATES + "&selected_page=" + str(currentpageofresults))
+            unpublisheddataqueryurl = f"https://dataverse.tdl.org/api/search?q=*&subtree={config['institutionaldataverse']}&start={currentpageofresults}&per_page={pagesize}&page={pageincrement}&fq=publicationStatus:Deaccessioned&type=dataset"
 
-            unpublisheddatasetlist = requests.get("https://dataverse.tdl.org/api/mydata/retrieve?role_ids=" + ROLE_IDS + "&dvobject_types=" + DVOBJECT_TYPES + "&published_states=" + PUBLISHED_STATES + "&selected_page=" + str(currentpageofresults), headers={"X-Dataverse-key":config['dataverse_api_key']})
+            writelog(unpublisheddataqueryurl)
 
+            unpublisheddatasetlist = requests.get(unpublisheddataqueryurl, headers={"X-Dataverse-key":config['dataverse_api_key']})
             unpublisheddata = json.loads(unpublisheddatasetlist.text)['data']
+            print(f"\nRetrieving {len(unpublisheddata['items'])} {PUBLISHED_STATES} datasets...\n")
+
+            # writelog("https://dataverse.tdl.org/api/mydata/retrieve?role_ids=" + ROLE_IDS + "&dvobject_types=" +DVOBJECT_TYPES + "&published_states=" +PUBLISHED_STATES + "&selected_page=" + str(currentpageofresults))
+            
+            # unpublisheddatasetlist = requests.get("https://dataverse.tdl.org/api/mydata/retrieve?role_ids=" + ROLE_IDS + "&dvobject_types=" + DVOBJECT_TYPES + "&published_states=" + PUBLISHED_STATES + "&selected_page=" + str(currentpageofresults), headers={"X-Dataverse-key":config['dataverse_api_key']})
+
+            # unpublisheddata = json.loads(unpublisheddatasetlist.text)['data']
 
             # writelog(unpublisheddata)
 
-            pagecount = unpublisheddata['pagination']['pageCount']
+            # pagecount = unpublisheddata['pagination']['pageCount']
 
             if currentpageofresults == 1:
                 writelog("NUMBER OF UNPUBLISHED RESULTS ACCESSIBLE UNDER USER ROLE STATUS "+ ROLE_IDS +": " + str(unpublisheddata['pagination']['numResults']))
@@ -330,7 +401,7 @@ if config["processunpublisheddatasets"] == "True":
 
 
                 doi = unpublisheddatasetinfo['global_id']
-                entityid = unpublisheddatasetinfo['entity_id']
+                # entityid = unpublisheddatasetinfo['entity_id'] #only for MyData endpoint
                 title = unpublisheddatasetinfo['name']
                 author = str(unpublisheddatasetinfo['authors'])
                 authorcontactemail = ""
@@ -431,10 +502,10 @@ if config["processunpublisheddatasets"] == "True":
         resultssummaryfile.write("   UNPUBLISHED DATASETS\n")
         resultssummaryfile.write("        number evaluated: " + str(unpublisheddatasetcounter) + "\n")
         resultssummaryfile.write("        stage 1 pass count: " + str(passcount) + "\n")
-        resultssummaryfile.write("        stage 1 review count: " + str(needsreviewcount) + "\n\n")
+        resultssummaryfile.write("        stage 1 needs review count: " + str(needsreviewcount) + "\n\n")
 
 
-writelog("\n\nFINISHED PROCESSING UNPUBLISHED DATASETS\n\n")
+    writelog("\n\nFINISHED PROCESSING UNPUBLISHED DATASETS\n\n")
 
 
 
@@ -847,13 +918,15 @@ with open("outputs/" + datetime.now().strftime("%Y-%m-%d") + "/all_results_summa
     resultssummaryfile.write("\n")
     resultssummaryfile.write("   RUN TIME\n")
     resultssummaryfile.write("        minutes elapsed = "+ m + ":" + sstr + "  \n")
-
-    writelog("")
-    writelog("PROCESSING COMPLETED SUCCCESSFULLY")
-    writelog("      total datasets evaluated: " + str(processedpublisheddatasets) + "\n")
-    writelog("      stage 1 pass count: " + str(passcount) + "\n")
-    writelog("      stage 2 mitigating factor dataset count: " + str(mitigatingfactordatasetcount) + "\n")
-    writelog("      stage 3 needs review count: " + str(needsreviewcount) + "\n")
-    writelog("      insufficient privileges to process: " + str(insufficientprivilegestoprocesscount) + "\n")
-    writelog("")
-    writelog("      minutes elapsed = "+ m + ":" + sstr + "  \n")
+    try: #handles if one category of dataset is not processed
+        writelog("")
+        writelog("PROCESSING COMPLETED SUCCCESSFULLY")
+        writelog("      total datasets evaluated: " + str(processedpublisheddatasets) + "\n")
+        writelog("      stage 1 pass count: " + str(passcount) + "\n")
+        writelog("      stage 2 mitigating factor dataset count: " + str(mitigatingfactordatasetcount) + "\n")
+        writelog("      stage 3 needs review count: " + str(needsreviewcount) + "\n")
+        writelog("      insufficient privileges to process: " + str(insufficientprivilegestoprocesscount) + "\n")
+        writelog("")
+        writelog("      minutes elapsed = "+ m + ":" + sstr + "  \n")
+    except Exception as e:
+        pass

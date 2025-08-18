@@ -79,7 +79,7 @@ deaccessionedcsvpath = "outputs/" + datetime.now().strftime("%Y-%m-%d") + "/deac
 
 
 #set output csv header row column names and write header rows to output csvs
-publishedheaderrow = ["doi","title","author", "author contact email", "latest version state", "date deposited","date published", "date distributed", "years since deposit", "years since publication", "years since distribution", "size(GB)", "unique downloads", "citation count", "funding", "exemption notes"]
+publishedheaderrow = ["doi","title","author", "author contact email", "latest version state", "date created","date last updated", "date published", "years since creation", "years since last update", "years since publication", "size(GB)", "unique downloads", "citation count", "funding", "exemption notes"]
 unpublishedheaderrow = ["doi","title","author", "author contact email", "latest version state", "date created", "date last updated", "years since creation", "years since last update", "size(GB)", "funding", "exemption notes"]
 deaccessionedheaderrow = ["doi","title","author", "author contact email", "latest version state", "date created", "date last updated", "years since creation", "years since last update", "size(GB)", "funding", "exemption notes", "status", "deaccession reason"]
 
@@ -358,10 +358,10 @@ if config["processpublisheddatasets"] == "True":
             authorcontactemail = ""
             datecreated = str(publisheddatasetinfo['createdAt'])
             datelastupdated = str(publisheddatasetinfo['updatedAt'])
-            datedistributed = ""
+            datepublished = ""
             yearssincecreation = ""
             yearssincelastupdated = ""
-            yearssincedistribution = ""
+            yearssincepublicationn = ""
             datasetsizevaluegb = ""
             uniquedownloads = ""
             totalcitations = ""
@@ -440,22 +440,19 @@ if config["processpublisheddatasets"] == "True":
             authorcontactemail = "; ".join(contactinfo)
             writelog(f"Contact email: {authorcontactemail}")
 
-            for field in fields:
-                if field.get('typeName') == 'dateOfDeposit':
-                    datedistributed = field.get('value', '')
-            writelog(f"Date distributed: {datedistributed}")
+            datepublished = current_version.get('publicationDate')
             
-            distributedyear = int(datedistributed.lower().split("t")[0].split("-")[0])
-            distributedmonth = int(datedistributed.lower().split("t")[0].split("-")[1])
-            distributedday = int(datedistributed.lower().split("t")[0].split("-")[2])
+            publishedyear = int(datepublished.lower().split("t")[0].split("-")[0])
+            publishedmonth = int(datepublished.lower().split("t")[0].split("-")[1])
+            publishedday = int(datepublished.lower().split("t")[0].split("-")[2])
 
-            writelog("distributedyear = " + str(distributedyear))
-            writelog("distributedmonth = " + str(distributedmonth))
-            writelog("distributedday = " + str(distributedday))
+            writelog("publishedyear = " + str(publishedyear))
+            writelog("publishedmonth = " + str(publishedmonth))
+            writelog("publishedday = " + str(publishedday))
 
-            yearssincedistribution = float(relativedelta(datetime.now(), datetime(distributedyear,distributedmonth,distributedday,0,0,0,0)).years + (relativedelta(datetime.now(), datetime(distributedyear,distributedmonth,distributedday,0,0,0,0)).months/12) + (relativedelta(datetime.now(), datetime(distributedyear,distributedmonth,distributedday,0,0,0,0)).days/365))
+            yearssincepublished = float(relativedelta(datetime.now(), datetime(publishedyear,publishedmonth,publishedday,0,0,0,0)).years + (relativedelta(datetime.now(), datetime(publishedyear,publishedmonth,publishedday,0,0,0,0)).months/12) + (relativedelta(datetime.now(), datetime(publishedyear,publishedmonth,publishedday,0,0,0,0)).days/365))
 
-            writelog("yearssincedistribution = " + str(yearssincedistribution))
+            writelog("yearssincepublished = " + str(yearssincepublished))
 
             latestversionstate = current_version.get('latestVersionPublishingState')
 
@@ -473,7 +470,7 @@ if config["processpublisheddatasets"] == "True":
             else:
                 uniquedownloads = "0"
 
-            datasetdetailsrow = [doi, title, author, authorcontactemail, latestversionstate, datecreated, datelastupdated, datedistributed, yearssincecreation, yearssincelastupdated, yearssincedistribution, datasetsizevaluegb, uniquedownloads, totalcitations, fundinginfo, exemptionnotes]
+            datasetdetailsrow = [doi, title, author, authorcontactemail, latestversionstate, datecreated, datelastupdated, datepublished, yearssincecreation, yearssincelastupdated, yearssincepublished, datasetsizevaluegb, uniquedownloads, totalcitations, fundinginfo, exemptionnotes]
 
             #published dataset does not need review
             if yearssincecreation < float(config['publisheddatasetreviewthresholdinyears']) and datasetsizevaluegb < float(config['publisheddatasetreviewthresholdingb']):

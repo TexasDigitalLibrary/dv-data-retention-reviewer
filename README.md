@@ -18,6 +18,8 @@ Once this repo is cloned locally, the .env.template file should be renamed to ju
 * showdataretentionscoredetails: "True" or "False", default = "True", determines if data retention score details should be included in generated reports
 * institutionaldataverse": Name of individual dataverse instance within multi-instutional Dataverse installation, e.g. "utexas" could be used to identify UT Austin datasets within the Texas Data Repository
 * paginationlimit: an integer value representing the number of pages of results to process
+* pageincrement: an integer value representing the number of pages to increase by with each pagination request
+* pagesize: an integer value representing the number of records to return per page. The default is 10; the max is 1000
 * unpublisheddatasetreviewthresholdinyears":1, the threshold for determining how long a dataset can remain unpublished in a Dataverse instance before being identified as needing review for potential deaccessioning - all unpublished datasets less than this many years old will be listed as not needing review
 * publisheddatasetreviewthresholdinyears":2, the threshold for determining how long a dataset can remain published in a Dataverse instance before being identified as needing review for potential deaccessioning - all published datasets less than this many years old will be listed as not needing review
 * unpublisheddatasetreviewthresholdingb":1, the threshold for determining how large an unpublished dataset can be in a Dataverse instance before being identified as needing review for potential deaccessioning - all unpublished datasets less than this many GB will be listed as not needing review even if they exceed the age threshold for unpublished datasets defined above

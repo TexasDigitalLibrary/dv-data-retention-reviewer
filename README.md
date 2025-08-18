@@ -1,4 +1,6 @@
 # dv-data-retention-reviewer
+Last updated: 2025-08-18
+
 This repository contains code for a scripted process that reviews published and unpublished datasets in a Dataverse instance and produces reports which identify datasets to be considered for deaccessioning.
 
 It has been developed to specifically support data retention decision making in the Texas Data Repository (https://dataverse.tdl.org/) but designed to be adaptable for other Dataverse installations.
@@ -46,6 +48,7 @@ The script will produce one text file and a variable number of CSVs in the *outp
 
 If you run cross-validation, it will presently return one file:
 * *{date}-{institution}-drafts-cross-validation.csv*: This file represents a "left-merge" from the list of DRAFT datasets that the user has admin privileges to, into a subsetted dataframe from the TDR biweekly report, which includes only never-previously-published datasets in DRAFT status. The last column indicates whether a user has privileges or not (though the many blank cells will also indicate as much).
+* *{date}-{institution}-published-cross-validation.csv*: This file represents a "left-merge" from the list of all PUBLISHED datasets that the user has admin privileges to, into a dataframe with all of the published datasets (which can be retrieved regardless of dataset-level admin privileges), which includes previously-published datasets that are currently in DRAFT status. The last column indicates whether a user has privileges or not (though the many blank cells will also indicate as much).
 
 ## Contact
 For any questions about this repository, please contact the the UT Austin Research Data Services team that has lead initial development of this tool by sending an email to utl-rds@austin.utexas.edu.

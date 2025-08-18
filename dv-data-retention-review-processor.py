@@ -1316,7 +1316,7 @@ if crossvalidate == "True":
     print("Data file loaded successfully.")
     draftsall = dataversereport[(dataversereport['versionState'] == "DRAFT") & (dataversereport['viewsUnique'].isnull())] #remove previously published, in draft
 
-    #import latest dataverse report
+    #import latest API outputs of DRAFT datasets
     pattern2 = 'stage1-passed-unpublished'
     stage1drafts, specificoutputdirectory = loadlatestoutputfile(outputsdirectory, pattern2)
     stage1drafts['stage'] = 'stage1'
@@ -1332,78 +1332,110 @@ if crossvalidate == "True":
 
     ##### IN DEVELOPMENT AS OF 2025-08-18, not tested for functionality #######
 
-    # #set filename
-    # publishedadminprivilegescsvpath = "outputs/" + todayDate + "/all-published-admin-privileges-list-" + todayDate + "-" + str(config['institutionaldataverse']) + ".csv"
+    #import latest API outputs of DRAFT datasets
+    ##get previously published ones in draft status now
+    tempdrafts = dataversereport[(dataversereport['versionState'] == "DRAFT") & (dataversereport['viewsUnique'].notnull())]
+    ##API outputs of published datasets assigned to different stages
+    pattern4 = 'stage1-passed-published'
+    stage1published, specificoutputdirectory = loadlatestoutputfile(outputsdirectory, pattern4)
+    stage1published['stage'] = 'stage1'
+    pattern5 = 'stage2-mitigatingfactor-published'
+    stage2published, specificoutputdirectory = loadlatestoutputfile(outputsdirectory, pattern5)
+    stage2published['stage'] = 'stage2'
+    pattern6 = 'stage3-needsreview-published'
+    stage3published, specificoutputdirectory = loadlatestoutputfile(outputsdirectory, pattern6)
+    stage3published['stage'] = 'stage3'
+    publishedall = pd.concat([stage1published, stage2published, stage3published, tempdrafts], ignore_index=True)
+    print("Data files loaded successfully.")
 
-    # #set CSV header rows
+    #set filename
+    publishedadminprivilegescsvpath = "outputs/" + todayDate + "/all-published-admin-privileges-list-" + todayDate + "-" + str(config['institutionaldataverse']) + ".csv"
+
+    #set CSV header rows
     # publishedadminheaderrow = ["doi","title","author", "author contact email", "latest version state", "date created","date last updated", "date published", "years since creation", "years since last update", "years since publication", "version", "size(GB)", "unique downloads", "citation count", "funding", "exemption notes"]
+    publishedadminheaderrow = ["doi","title","author", "date created","date last updated", "version"]
 
-    # #create output CSV file
-    # writerowtocsv(publishedadminprivilegescsvpath,publishedadminheaderrow,"w")
+    #create output CSV file
+    writerowtocsv(publishedadminprivilegescsvpath,publishedadminheaderrow,"w")
 
-    # writelog("\n\nRETRIEVING PUBLISHED DATASETS FROM MyData ENDPOINT\n\n")
-    # ROLE_IDS = str(1) #admin role
-    # DVOBJECT_TYPES="Dataset"
-    # PUBLISHED_STATES="Published"
+    writelog("\n\nRETRIEVING PUBLISHED DATASETS FROM MyData ENDPOINT\n\n")
+    ROLE_IDS = str(1) #admin role
+    DVOBJECT_TYPES="Dataset"
+    PUBLISHED_STATES="Published"
 
-    # publishedddatasetcounter = 0
-    # currentpageofresults = 0
-    # pagecount = config['paginationlimit']
-    # pageincrement = config['pageincrement']
-    # pagesize = config['pagesize']
+    publishedddatasetcounter = 0
+    currentpageofresults = 0
+    pagecount = config['paginationlimit']
+    pageincrement = config['pageincrement']
+    pagesize = config['pagesize']
 
-    # while currentpageofresults < pagecount:
+    while currentpageofresults < pagecount:
 
-    #         try:
-    #             currentpageofresults += 1
+            try:
+                currentpageofresults += 1
 
-    #             # deaccessionedqueryurl = "https://dataverse.tdl.org/api/mydata/retrieve?role_ids=" + ROLE_IDS + "&dvobject_types=" +DVOBJECT_TYPES + "&published_states=" +PUBLISHED_STATES + "&selected_page=" + str(currentpageofresults)
+                # deaccessionedqueryurl = "https://dataverse.tdl.org/api/mydata/retrieve?role_ids=" + ROLE_IDS + "&dvobject_types=" +DVOBJECT_TYPES + "&published_states=" +PUBLISHED_STATES + "&selected_page=" + str(currentpageofresults)
 
-    #             #substituting search endpoint
-    #             publisheddatasetslist = requests.get("https://dataverse.tdl.org/api/mydata/retrieve?role_ids=" + ROLE_IDS + "&dvobject_types=" + DVOBJECT_TYPES + "&published_states=" + PUBLISHED_STATES + "&selected_page=" + str(currentpageofresults), headers={"X-Dataverse-key":config['dataverse_api_key']})
+                #substituting search endpoint
+                publisheddatasetslist = requests.get("https://dataverse.tdl.org/api/mydata/retrieve?role_ids=" + ROLE_IDS + "&dvobject_types=" + DVOBJECT_TYPES + "&published_states=" + PUBLISHED_STATES + "&selected_page=" + str(currentpageofresults), headers={"X-Dataverse-key":config['dataverse_api_key']})
 
-    #             publisheddata = json.loads(publisheddatasetslist.text)['data']
-    #             print(publisheddata['start'])
+                publisheddata = json.loads(publisheddatasetslist.text)['data']
+                print(publisheddata['start'])
 
-    #             pagecount = publisheddata['pagination']['pageCount']
+                pagecount = publisheddata['pagination']['pageCount']
 
-    #             if currentpageofresults == 1:
-    #                 writelog("NUMBER OF PUBLISHED RESULTS: " + str(publisheddata['total_count']))
-
-
-    #             for publishedddatasetcounter, publisheddatasetinfo in enumerate(json.loads(publisheddatasetslist.text)['data']['items']):
-
-    #                 writelog("#" + str(publishedddatasetcounter) + " DEACCESSIONED DATASET")
-    #                 publishedddatasetcounter += 1
-
-    #                 for k,v in publisheddatasetinfo.items():
-    #                     writelog("   " + k + ": "+ str(v))
-
-    #                 doi = publisheddatasetinfo['global_id']
-    #                 entityid = publisheddatasetinfo['entity_id']
-    #                 title = publisheddatasetinfo['name']
-    #                 author = str(publisheddatasetinfo['authors'])
-    #                 authorcontactemail = ""
-    #                 datecreated = str(publisheddatasetinfo['createdAt'])
-    #                 datelastupdated = str(publisheddatasetinfo['updatedAt'])
-    #                 yearssincecreation = ""
-    #                 yearssincelastupdated = ""
-    #                 datasetsizevaluegb = ""
-    #                 fundinginfo = ""
-    #                 datalicense = ""
-    #                 latestversionstate = ""
-    #                 exemptionnotes = ""
-    #                 status = publisheddatasetinfo['versionState']
-    #                 deaccessionreason = publisheddatasetinfo['deaccession_reason']
-
-    #                 writelog("\n\n")
-
-    #                 datasetdetailsrow = [doi, title, author, authorcontactemail, latestversionstate, datecreated, datelastupdated, yearssincecreation, yearssincelastupdated, datasetsizevaluegb, fundinginfo, exemptionnotes, status, deaccessionreason]
+                if currentpageofresults == 1:
+                    writelog("NUMBER OF PUBLISHED RESULTS: " + str(publisheddata['total_count']))
 
 
-    #                 writerowtocsv(deaccessionedcsvpath, datasetdetailsrow, "a")
+                for publishedddatasetcounter, publisheddatasetinfo in enumerate(json.loads(publisheddatasetslist.text)['data']['items']):
+
+                    writelog("#" + str(publishedddatasetcounter) + " PUBLISHED DATASET")
+                    publishedddatasetcounter += 1
+
+                    for k,v in publisheddatasetinfo.items():
+                        writelog("   " + k + ": "+ str(v))
+
+                    doi = publisheddatasetinfo['global_id']
+                    # entityid = unpublisheddatasetinfo['entity_id'] #only for MyData endpoint
+                    title = publisheddatasetinfo['name']
+                    author = str(publisheddatasetinfo['authors'])
+                    # authorcontactemail = ""
+                    datecreated = str(publisheddatasetinfo['createdAt'])
+                    datelastupdated = str(publisheddatasetinfo['updatedAt'])
+                    # datepublished = ""
+                    # yearssincecreation = ""
+                    # yearssincelastupdated = ""
+                    # yearssincepublished = ""
+                    major = publisheddatasetinfo['majorVersion']
+                    minor = publisheddatasetinfo['minorVersion']
+                    version = float(f"{major}.{minor}")
+                    # datasetsizevaluegb = ""
+                    # uniquedownloads = ""
+                    # totalcitations = ""
+                    # fundinginfo = ""
+                    # datalicense = ""
+                    # latestversionstate = ""
+                    # exemptionnotes = ""
+
+                    writelog("\n\n")
+
+                    # datasetdetailsrow = [doi, title, author, authorcontactemail, latestversionstate, datecreated, datelastupdated, datepublished, yearssincecreation, yearssincelastupdated, yearssincepublished, version, datasetsizevaluegb, uniquedownloads, totalcitations, fundinginfo, exemptionnotes]
+
+                    #restricting headers (not repeating Native API call)
+                    datasetdetailsrow = [doi, title, author, datecreated, datelastupdated, version]
+
+                    writerowtocsv(publishedadminprivilegescsvpath, datasetdetailsrow, "a")
 
 
-    #         except Exception as e:
-    #             writelog(str(e))
-    #             break
+            except Exception as e:
+                writelog(str(e))
+                break
+    
+    #read the CSV back in
+    pattern7 = 'all-published-admin-privileges'
+    adminpublished, specificoutputdirectory = loadlatestoutputfile(outputsdirectory, pattern7)
+
+    publishedcombined = pd.merge(publishedall, adminpublished, on='doi', how='left')
+    publishedcombined['admin_privileges'] = np.where(publishedcombined['version_y'].isnull(), 'No privileges', 'Privileges') #can use any column that is always filled in the file that was just created but be aware you may need to add '_y' if the same column appears twice
+    publishedcombined.to_csv(specificoutputdirectory+f'/{todayDate}-{str(config['institutionaldataverse'])}-published-cross-validation.csv')

@@ -8,12 +8,14 @@ from datetime import datetime
 from dateutil.relativedelta import relativedelta
 import time
 import math
-# import datetime
-# import pandas as pd
+import win32com.client
+import numpy as np
+import pandas as pd
 
 print("all packages imported successfully")
 
-
+#define today's date for quick calling
+todayDate = datetime.now().strftime("%Y-%m-%d")
 
 #function for writing new rows to output csv files
 def writerowtocsv(outputcsvpath,row,mode):
@@ -21,6 +23,53 @@ def writerowtocsv(outputcsvpath,row,mode):
         csvwriter = csv.writer(opencsv)
         csvwriter.writerow(row)
 
+#function to import the most recent dataverse report EXCEL file
+def loadlatestdataversereport(tdrdataversereports, pattern):
+    files = os.listdir(tdrdataversereports)
+    files.sort(reverse=True)
+
+    latest_file = None
+    for file in files:
+        if pattern in file:
+            latest_file = file
+            break
+
+    if not latest_file:
+        print(f"No file with '{pattern}' was found in '{tdrdataversereports}'.")
+        return None
+    else:
+        file_path = os.path.join(tdrdataversereports, latest_file)
+        df = pd.read_excel(file_path, sheet_name='datasets', engine='openpyxl')
+        print(f"The most recent file '{latest_file}' has been loaded successfully.")
+        return df
+
+#function to search for the most recent output subfolder and then a specified CSV file within it    
+def loadlatestoutputfile(directory, pattern):
+    subfolders = [f for f in os.listdir(directory) if os.path.isdir(os.path.join(directory, f))]
+
+    date_subfolders = []
+    for folder in subfolders:
+        try:
+            datetime.strptime(folder, "%Y-%m-%d")
+            date_subfolders.append(folder)
+        except ValueError:
+            continue
+
+    date_subfolders.sort(reverse=True)
+    for recent_folder in date_subfolders:
+        folder_path = os.path.join(directory, recent_folder)
+        files = os.listdir(folder_path)
+        files.sort(reverse=True)
+
+        for file in files:
+            if pattern in file:
+                file_path = os.path.join(folder_path, file)
+                df = pd.read_csv(file_path)
+                print(f"The most recent file '{file}' from folder '{recent_folder}' has been loaded successfully.")
+                return df, folder_path
+
+    print(f"No file with '{pattern}' was found in any subfolder of '{directory}'.")
+    return None
 
 # Open and read config parameters from .env file
 configfile = ".env"
@@ -29,29 +78,38 @@ with open(configfile) as envfile:
 
 #define whether to run in test mode
 test = config['test']
-print(test)
+if test == "True":
+    subset = 10
+    print(f"only testing with the first {subset} records")
+
+#define whether to run cross-validation to ID how many published datasets you have admin privileges to
+crossvalidate = config['crossvalidate']
 
 #load API key
 headers_dataverse = {
     'X-Dataverse-key': config['dataverse_api_key']
 }
 
+#if tdr-dataverse-reports directory does not yet exist, create it
+if not os.path.isdir("tdr-dataverse-reports"):
+    os.mkdir("tdr-dataverse-reports")
+
 #if outputs directory does not yet exist, create it
 if not os.path.isdir("outputs"):
     os.mkdir("outputs")
 
 #if outputs directory does not yet exist, create it
-if not os.path.isdir("./outputs/" + datetime.now().strftime("%Y-%m-%d")):
-    os.mkdir("outputs/" + datetime.now().strftime("%Y-%m-%d"))
-    print("outputs/" + datetime.now().strftime("%Y-%m-%d") + " has been created successfully")
+if not os.path.isdir("./outputs/" + todayDate):
+    os.mkdir("outputs/" + todayDate)
+    print("outputs/" + todayDate + " has been created successfully")
 
 
 
 
 
 #create summary file
-with open("outputs/" + datetime.now().strftime("%Y-%m-%d") + "/all_results_summary.txt", "w") as resultssummaryfile:
-    resultssummaryfile.write("Results summary " + datetime.now().strftime("%Y-%m-%d") + "\n\n")
+with open("outputs/" + todayDate + "/all_results_summary.txt", "w") as resultssummaryfile:
+    resultssummaryfile.write("Results summary " + todayDate + "\n\n")
     resultssummaryfile.write("   REVIEW CRITERIA \n")
     resultssummaryfile.write("        UNPUBLISHED DATA years since created = "+ str(config['unpublisheddatasetreviewthresholdinyears']) +"  \n")
     resultssummaryfile.write("        UNPUBLISHED DATA dataset size threshold = "+ str(config['unpublisheddatasetreviewthresholdingb']) +"  \n")
@@ -69,13 +127,13 @@ totaldatasetsindataverseovertenyearsoldandoverfivegb = 0
 
 
 #define file paths for all output CSV files
-publishedneedsreviewcsvpath = "outputs/" + datetime.now().strftime("%Y-%m-%d") + "/stage3-needsreview-published-list-" + datetime.now().strftime("%Y-%m-%d") + "-" + str(config['institutionaldataverse']) + ".csv"
-unpublishedneedsreviewcsvpath = "outputs/" + datetime.now().strftime("%Y-%m-%d") + "/stage3-needsreview-unpublished-list-" + datetime.now().strftime("%Y-%m-%d") + "-" + str(config['institutionaldataverse']) + ".csv"
-publishedmitigatingfactorcsvpath = "outputs/" + datetime.now().strftime("%Y-%m-%d") + "/stage2-mitigatingfactor-published-list-" + datetime.now().strftime("%Y-%m-%d") + "-" + str(config['institutionaldataverse']) + ".csv"
-publishednoreviewneededcsvpath = "outputs/" + datetime.now().strftime("%Y-%m-%d") + "/stage1-passed-published-list-" + datetime.now().strftime("%Y-%m-%d") + "-" + str(config['institutionaldataverse']) + ".csv"
-unpublishednoreviewneededcsvpath = "outputs/" + datetime.now().strftime("%Y-%m-%d") + "/stage1-passed-unpublished-list-" + datetime.now().strftime("%Y-%m-%d") + "-" + str(config['institutionaldataverse']) + ".csv"
-couldnotbeevaluatedcsvpath = "outputs/" + datetime.now().strftime("%Y-%m-%d") + "/could-not-be-evaluated-" + datetime.now().strftime("%Y-%m-%d") + "-" + str(config['institutionaldataverse']) + ".csv"
-deaccessionedcsvpath = "outputs/" + datetime.now().strftime("%Y-%m-%d") + "/deaccessioned-" + datetime.now().strftime("%Y-%m-%d") + "-" + str(config['institutionaldataverse']) + ".csv"
+publishedneedsreviewcsvpath = "outputs/" + todayDate + "/stage3-needsreview-published-list-" + todayDate + "-" + str(config['institutionaldataverse']) + ".csv"
+unpublishedneedsreviewcsvpath = "outputs/" + todayDate + "/stage3-needsreview-unpublished-list-" + todayDate + "-" + str(config['institutionaldataverse']) + ".csv"
+publishedmitigatingfactorcsvpath = "outputs/" + todayDate + "/stage2-mitigatingfactor-published-list-" + todayDate + "-" + str(config['institutionaldataverse']) + ".csv"
+publishednoreviewneededcsvpath = "outputs/" + todayDate + "/stage1-passed-published-list-" + todayDate + "-" + str(config['institutionaldataverse']) + ".csv"
+unpublishednoreviewneededcsvpath = "outputs/" + todayDate + "/stage1-passed-unpublished-list-" + todayDate + "-" + str(config['institutionaldataverse']) + ".csv"
+couldnotbeevaluatedcsvpath = "outputs/" + todayDate + "/could-not-be-evaluated-" + todayDate + "-" + str(config['institutionaldataverse']) + ".csv"
+deaccessionedcsvpath = "outputs/" + todayDate + "/deaccessioned-" + todayDate + "-" + str(config['institutionaldataverse']) + ".csv"
 
 
 #set output csv header row column names and write header rows to output csvs
@@ -208,7 +266,7 @@ if config["processdeaccessioneddatasets"] == "True":
     except Exception as e:
         print(f"Error processing: {str(e)}")
 
-    with open("outputs/" + datetime.now().strftime("%Y-%m-%d") + "/all_results_summary.txt", "a") as resultssummaryfile:
+    with open("outputs/" + todayDate + "/all_results_summary.txt", "a") as resultssummaryfile:
         resultssummaryfile.write("   DEACCESSIONED DATASETS\n")
         resultssummaryfile.write("        number evaluated: " + str(deaccessioneddatasetcounter) + "\n\n")
 
@@ -272,7 +330,7 @@ if config["processdeaccessioneddatasets"] == "True":
     #         writelog(str(e))
     #         break
 
-    # with open("outputs/" + datetime.now().strftime("%Y-%m-%d") + "/all_results_summary.txt", "a") as resultssummaryfile:
+    # with open("outputs/" + todayDate + "/all_results_summary.txt", "a") as resultssummaryfile:
     #     resultssummaryfile.write("   DEACCESSIONED DATASETS\n")
     #     resultssummaryfile.write("        number evaluated: " + str(deaccessioneddatasetcounter) + "\n\n")
 
@@ -334,9 +392,7 @@ if config["processpublisheddatasets"] == "True":
         except Exception as e:
             writelog(str(e))   
     
-    if test: 
-        subset = 10
-        print(f"only testing with the first {subset} records")
+    if test == "True": 
         publisheddata = publisheddata[:subset]
 
     for publisheddatasetsprocessedcount, publisheddatasetinfo in enumerate(publisheddata):
@@ -490,7 +546,7 @@ if config["processpublisheddatasets"] == "True":
             writelog("\n\n")
 
 
-    with open("outputs/" + datetime.now().strftime("%Y-%m-%d") + "/all_results_summary.txt", "a") as resultssummaryfile:
+    with open("outputs/" + todayDate + "/all_results_summary.txt", "a") as resultssummaryfile:
         resultssummaryfile.write("   PUBLISHED DATASETS\n")
         resultssummaryfile.write("        number evaluated: " + str(publisheddatasetcounter) + "\n")
         resultssummaryfile.write("        stage 1 pass count: " + str(passcount) + "\n")
@@ -644,9 +700,7 @@ if config["processunpublisheddatasets"] == "True":
             # if currentpageofresults == 1:
             #     writelog("NUMBER OF UNPUBLISHED RESULTS ACCESSIBLE UNDER USER ROLE STATUS "+ ROLE_IDS +": " + str(unpublisheddata['pagination']['numResults']))
 
-    if test: 
-        subset = 10
-        print(f"only testing with the first {subset} records")
+    if test == "True":
         unpublisheddata = unpublisheddata[:subset]
 
     for unpublisheddatasetsprocessedcount, unpublisheddatasetinfo in enumerate(unpublisheddata):
@@ -778,7 +832,7 @@ if config["processunpublisheddatasets"] == "True":
         writelog("\n\n")
 
 
-    with open("outputs/" + datetime.now().strftime("%Y-%m-%d") + "/all_results_summary.txt", "a") as resultssummaryfile:
+    with open("outputs/" + todayDate + "/all_results_summary.txt", "a") as resultssummaryfile:
         resultssummaryfile.write("   UNPUBLISHED DATASETS\n")
         resultssummaryfile.write("        number evaluated: " + str(unpublisheddatasetcounter) + "\n")
         resultssummaryfile.write("        stage 1 pass count: " + str(passcount) + "\n")
@@ -1177,7 +1231,7 @@ if config["processunpublisheddatasets"] == "True":
     #         except Exception as e:
     #             writelog(str(e))
 
-    # with open("outputs/" + datetime.now().strftime("%Y-%m-%d") + "/all_results_summary.txt", "a") as resultssummaryfile:
+    # with open("outputs/" + todayDate + "/all_results_summary.txt", "a") as resultssummaryfile:
     #     resultssummaryfile.write("   PUBLISHED DATASETS\n")
     #     resultssummaryfile.write("        number evaluated: " + str(processedpublisheddatasets) + "\n")
     #     resultssummaryfile.write("        stage 1 pass count: " + str(passcount) + "\n")
@@ -1187,7 +1241,7 @@ if config["processunpublisheddatasets"] == "True":
 
 
 
-with open("outputs/" + datetime.now().strftime("%Y-%m-%d") + "/all_results_summary.txt", "a") as resultssummaryfile:
+with open("outputs/" + todayDate + "/all_results_summary.txt", "a") as resultssummaryfile:
 
     totalseconds = int(time.time() - ot)
     m, s = str(int(math.floor(totalseconds/60))), int(round(totalseconds%60))
@@ -1201,7 +1255,7 @@ with open("outputs/" + datetime.now().strftime("%Y-%m-%d") + "/all_results_summa
     resultssummaryfile.write("        minutes elapsed = "+ m + ":" + sstr + "  \n")
     try: #handles if one category of dataset is not processed
         writelog("")
-        writelog("PROCESSING COMPLETED SUCCCESSFULLY")
+        writelog("PROCESSING COMPLETED SUCCESSFULLY")
         # writelog("      total datasets evaluated: " + str(processedpublisheddatasets) + "\n")
         writelog("      stage 1 pass count: " + str(passcount) + "\n")
         # writelog("      stage 2 mitigating factor dataset count: " + str(mitigatingfactordatasetcount) + "\n")
@@ -1211,3 +1265,145 @@ with open("outputs/" + datetime.now().strftime("%Y-%m-%d") + "/all_results_summa
         writelog("      minutes elapsed = "+ m + ":" + sstr + "  \n")
     except Exception as e:
         pass
+
+#identifying published datasets that you do not have admin privileges to process
+if crossvalidate == "True":
+    if config['email'] == "Outlook":
+        #define search parameters
+        sender = "dataverse@tdl.org" #email address TDR uses to send biweekly reports
+        subject = "Dataverse reports for"
+
+        #define paths for downloading and importing files to/from
+        scriptdirectory = os.path.dirname(os.path.abspath(__file__))
+        tdrdataversereports = os.path.join(scriptdirectory, 'tdr-dataverse-reports')
+        outputsdirectory = os.path.join(scriptdirectory, 'outputs')
+
+        #default Outlook settings, should work for most accounts
+        outlook = win32com.client.Dispatch("Outlook.Application").GetNamespace("MAPI")
+        root_folder = outlook.GetDefaultFolder(6)  #6 = Inbox
+        folders_to_search = [root_folder]
+        found = False
+
+        while folders_to_search and not found:
+            current_folder = folders_to_search.pop(0)
+            folders_to_search.extend(list(current_folder.Folders))
+
+            try:
+                messages = current_folder.Items
+                messages.Sort("[ReceivedTime]", True)  #sort by newest first
+
+                for message in messages:
+                    try:
+                        if message.Class == 43:  # MailItem
+                            if (subject in message.Subject) and (message.SenderEmailAddress == sender):
+                                if message.Attachments.Count > 0:
+                                    sent_date = message.SentOn.strftime("%Y%m%d")  # Format as YYYYMMDD
+                                    for attachment in message.Attachments:
+                                        filename = f"{sent_date}_{attachment.FileName}"
+                                        attachment.SaveAsFile(os.path.join(tdrdataversereports, filename))
+                                    print(f"Saved from: {message.Subject}")
+                                found = True
+                                break  #stop after first match
+                    except Exception as e:
+                        print(f"Skipped one item due to error: {e}")
+            except Exception as folder_error:
+                print(f"Could not access folder: {current_folder.Name} — {folder_error}")
+
+    #import latest dataverse report
+    pattern1 = '-dataverse-reports.xlsx'
+    dataversereport = loadlatestdataversereport(tdrdataversereports, pattern1)
+    dataversereport['doi'] = 'doi:'+ dataversereport['authority'].astype(str) + '/' + dataversereport['identifier'].astype(str)
+    print("Data file loaded successfully.")
+    draftsall = dataversereport[(dataversereport['versionState'] == "DRAFT") & (dataversereport['viewsUnique'].isnull())] #remove previously published, in draft
+
+    #import latest dataverse report
+    pattern2 = 'stage1-passed-unpublished'
+    stage1drafts, specificoutputdirectory = loadlatestoutputfile(outputsdirectory, pattern2)
+    stage1drafts['stage'] = 'stage1'
+    pattern3 = 'stage3-needsreview-unpublished'
+    stage3drafts, specificoutputdirectory = loadlatestoutputfile(outputsdirectory, pattern3)
+    stage3drafts['stage'] = 'stage3'
+    draftssome = pd.concat([stage1drafts, stage3drafts], ignore_index=True)
+    print("Data files loaded successfully.")
+
+    draftscombined = pd.merge(draftsall, draftssome, on='doi', how='left')
+    draftscombined['admin_privileges'] = np.where(draftscombined['stage'].isnull(), 'No privileges', 'Privileges') #can use any column that is always filled in the outputs file
+    draftscombined.to_csv(specificoutputdirectory+f'/{todayDate}-{str(config['institutionaldataverse'])}-drafts-cross-validation.csv')
+
+    ##### IN DEVELOPMENT AS OF 2025-08-18, not tested for functionality #######
+
+    # #set filename
+    # publishedadminprivilegescsvpath = "outputs/" + todayDate + "/all-published-admin-privileges-list-" + todayDate + "-" + str(config['institutionaldataverse']) + ".csv"
+
+    # #set CSV header rows
+    # publishedadminheaderrow = ["doi","title","author", "author contact email", "latest version state", "date created","date last updated", "date published", "years since creation", "years since last update", "years since publication", "version", "size(GB)", "unique downloads", "citation count", "funding", "exemption notes"]
+
+    # #create output CSV file
+    # writerowtocsv(publishedadminprivilegescsvpath,publishedadminheaderrow,"w")
+
+    # writelog("\n\nRETRIEVING PUBLISHED DATASETS FROM MyData ENDPOINT\n\n")
+    # ROLE_IDS = str(1) #admin role
+    # DVOBJECT_TYPES="Dataset"
+    # PUBLISHED_STATES="Published"
+
+    # publishedddatasetcounter = 0
+    # currentpageofresults = 0
+    # pagecount = config['paginationlimit']
+    # pageincrement = config['pageincrement']
+    # pagesize = config['pagesize']
+
+    # while currentpageofresults < pagecount:
+
+    #         try:
+    #             currentpageofresults += 1
+
+    #             # deaccessionedqueryurl = "https://dataverse.tdl.org/api/mydata/retrieve?role_ids=" + ROLE_IDS + "&dvobject_types=" +DVOBJECT_TYPES + "&published_states=" +PUBLISHED_STATES + "&selected_page=" + str(currentpageofresults)
+
+    #             #substituting search endpoint
+    #             publisheddatasetslist = requests.get("https://dataverse.tdl.org/api/mydata/retrieve?role_ids=" + ROLE_IDS + "&dvobject_types=" + DVOBJECT_TYPES + "&published_states=" + PUBLISHED_STATES + "&selected_page=" + str(currentpageofresults), headers={"X-Dataverse-key":config['dataverse_api_key']})
+
+    #             publisheddata = json.loads(publisheddatasetslist.text)['data']
+    #             print(publisheddata['start'])
+
+    #             pagecount = publisheddata['pagination']['pageCount']
+
+    #             if currentpageofresults == 1:
+    #                 writelog("NUMBER OF PUBLISHED RESULTS: " + str(publisheddata['total_count']))
+
+
+    #             for publishedddatasetcounter, publisheddatasetinfo in enumerate(json.loads(publisheddatasetslist.text)['data']['items']):
+
+    #                 writelog("#" + str(publishedddatasetcounter) + " DEACCESSIONED DATASET")
+    #                 publishedddatasetcounter += 1
+
+    #                 for k,v in publisheddatasetinfo.items():
+    #                     writelog("   " + k + ": "+ str(v))
+
+    #                 doi = publisheddatasetinfo['global_id']
+    #                 entityid = publisheddatasetinfo['entity_id']
+    #                 title = publisheddatasetinfo['name']
+    #                 author = str(publisheddatasetinfo['authors'])
+    #                 authorcontactemail = ""
+    #                 datecreated = str(publisheddatasetinfo['createdAt'])
+    #                 datelastupdated = str(publisheddatasetinfo['updatedAt'])
+    #                 yearssincecreation = ""
+    #                 yearssincelastupdated = ""
+    #                 datasetsizevaluegb = ""
+    #                 fundinginfo = ""
+    #                 datalicense = ""
+    #                 latestversionstate = ""
+    #                 exemptionnotes = ""
+    #                 status = publisheddatasetinfo['versionState']
+    #                 deaccessionreason = publisheddatasetinfo['deaccession_reason']
+
+    #                 writelog("\n\n")
+
+    #                 datasetdetailsrow = [doi, title, author, authorcontactemail, latestversionstate, datecreated, datelastupdated, yearssincecreation, yearssincelastupdated, datasetsizevaluegb, fundinginfo, exemptionnotes, status, deaccessionreason]
+
+
+    #                 writerowtocsv(deaccessionedcsvpath, datasetdetailsrow, "a")
+
+
+    #         except Exception as e:
+    #             writelog(str(e))
+    #             break

@@ -79,7 +79,7 @@ deaccessionedcsvpath = "outputs/" + datetime.now().strftime("%Y-%m-%d") + "/deac
 
 
 #set output csv header row column names and write header rows to output csvs
-publishedheaderrow = ["doi","title","author", "author contact email", "latest version state", "date created","date last updated", "date published", "years since creation", "years since last update", "years since publication", "size(GB)", "unique downloads", "citation count", "funding", "exemption notes"]
+publishedheaderrow = ["doi","title","author", "author contact email", "latest version state", "date created","date last updated", "date published", "years since creation", "years since last update", "years since publication", "version", "size(GB)", "unique downloads", "citation count", "funding", "exemption notes"]
 unpublishedheaderrow = ["doi","title","author", "author contact email", "latest version state", "date created", "date last updated", "years since creation", "years since last update", "size(GB)", "funding", "exemption notes"]
 deaccessionedheaderrow = ["doi","title","author", "author contact email", "latest version state", "date created", "date last updated", "years since creation", "years since last update", "size(GB)", "funding", "exemption notes", "status", "deaccession reason"]
 
@@ -361,7 +361,10 @@ if config["processpublisheddatasets"] == "True":
             datepublished = ""
             yearssincecreation = ""
             yearssincelastupdated = ""
-            yearssincepublicationn = ""
+            yearssincepublished = ""
+            major = publisheddatasetinfo['majorVersion']
+            minor = publisheddatasetinfo['minorVersion']
+            version = float(f"{major}.{minor}")
             datasetsizevaluegb = ""
             uniquedownloads = ""
             totalcitations = ""
@@ -417,6 +420,7 @@ if config["processpublisheddatasets"] == "True":
                 file.get('dataFile', {}).get('filesize', 0) for file in all_files
             )
             datasetsizevaluegb = round(total_filesize_bytes / (1024 ** 3), 2)
+            writelog(f"Version: {version}, {major}, {minor}")
             writelog(f"Total File Size (GB): {datasetsizevaluegb}")
 
             citation = current_version.get('metadataBlocks', {}).get('citation', {})
@@ -470,7 +474,7 @@ if config["processpublisheddatasets"] == "True":
             else:
                 uniquedownloads = "0"
 
-            datasetdetailsrow = [doi, title, author, authorcontactemail, latestversionstate, datecreated, datelastupdated, datepublished, yearssincecreation, yearssincelastupdated, yearssincepublished, datasetsizevaluegb, uniquedownloads, totalcitations, fundinginfo, exemptionnotes]
+            datasetdetailsrow = [doi, title, author, authorcontactemail, latestversionstate, datecreated, datelastupdated, datepublished, yearssincecreation, yearssincelastupdated, yearssincepublished, version, datasetsizevaluegb, uniquedownloads, totalcitations, fundinginfo, exemptionnotes]
 
             #published dataset does not need review
             if yearssincecreation < float(config['publisheddatasetreviewthresholdinyears']) and datasetsizevaluegb < float(config['publisheddatasetreviewthresholdingb']):

@@ -29,6 +29,7 @@ with open(configfile) as envfile:
 
 #define whether to run in test mode
 test = config['test']
+print(test)
 
 #load API key
 headers_dataverse = {

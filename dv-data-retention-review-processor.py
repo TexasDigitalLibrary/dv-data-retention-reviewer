@@ -117,7 +117,7 @@ with open("outputs/" + todayDate + "/all_results_summary.txt", "w") as resultssu
     resultssummaryfile.write("        PUBLISHED DATA dataset size threshold = "+ str(config['publisheddatasetreviewthresholdingb']) +"  \n")
     resultssummaryfile.write("        PUBLISHED DATA mitigating factor minimum downloads = "+ str(config['mitigatingfactormindownloadcount']) +"\n")
     resultssummaryfile.write("        PUBLISHED DATA mitigating factor: minimum citations = "+ str(config['mitigatingfactormincitationcount']) +"  \n\n")
-
+    resultssummaryfile.write("        CROSSVALIDATION PERFORMED: "+ str(config['crossvalidate']) +"  \n\n")
 
 #set initial counts to 0
 totaldatasetsindataverse = 0
@@ -1241,31 +1241,6 @@ if config["processunpublisheddatasets"] == "True":
 
 
 
-with open("outputs/" + todayDate + "/all_results_summary.txt", "a") as resultssummaryfile:
-
-    totalseconds = int(time.time() - ot)
-    m, s = str(int(math.floor(totalseconds/60))), int(round(totalseconds%60))
-    if s < 10:
-        sstr = "0" + str(s)
-    else:
-        sstr = str(s)
-
-    resultssummaryfile.write("\n")
-    resultssummaryfile.write("   RUN TIME\n")
-    resultssummaryfile.write("        minutes elapsed = "+ m + ":" + sstr + "  \n")
-    try: #handles if one category of dataset is not processed
-        writelog("")
-        writelog("PROCESSING COMPLETED SUCCESSFULLY")
-        # writelog("      total datasets evaluated: " + str(processedpublisheddatasets) + "\n")
-        writelog("      stage 1 pass count: " + str(passcount) + "\n")
-        # writelog("      stage 2 mitigating factor dataset count: " + str(mitigatingfactordatasetcount) + "\n")
-        writelog("      stage 3 needs review count: " + str(needsreviewcount) + "\n")
-        # writelog("      insufficient privileges to process: " + str(insufficientprivilegestoprocesscount) + "\n")
-        writelog("")
-        writelog("      minutes elapsed = "+ m + ":" + sstr + "  \n")
-    except Exception as e:
-        pass
-
 #identifying published datasets that you do not have admin privileges to process
 if crossvalidate == "True":
     if config['email'] == "Outlook":
@@ -1439,3 +1414,40 @@ if crossvalidate == "True":
     publishedcombined = pd.merge(publishedall, adminpublished, on='doi', how='left')
     publishedcombined['admin_privileges'] = np.where(publishedcombined['version_y'].isnull(), 'No privileges', 'Privileges') #can use any column that is always filled in the file that was just created but be aware you may need to add '_y' if the same column appears twice
     publishedcombined.to_csv(specificoutputdirectory+f'/{todayDate}-{str(config['institutionaldataverse'])}-published-cross-validation.csv')
+
+
+with open("outputs/" + todayDate + "/all_results_summary.txt", "a") as resultssummaryfile:
+
+    totalseconds = int(time.time() - ot)
+    m, s = str(int(math.floor(totalseconds/60))), int(round(totalseconds%60))
+    if s < 10:
+        sstr = "0" + str(s)
+    else:
+        sstr = str(s)
+
+    if crossvalidate:
+        resultssummaryfile.write("\n")
+        unpublishedcounts = draftscombined['admin_privileges'].value_counts()
+        resultssummaryfile.write('Admin privileges for unpublished datasets:\n')
+        resultssummaryfile.write(unpublishedcounts.to_string())
+        resultssummaryfile.write("\n")
+        publishedcounts = publishedcombined['admin_privileges'].value_counts()
+        resultssummaryfile.write('Admin privileges for published datasets:\n')
+        resultssummaryfile.write(publishedcounts.to_string())
+        resultssummaryfile.write("\n")
+
+    resultssummaryfile.write("\n")
+    resultssummaryfile.write("   RUN TIME\n")
+    resultssummaryfile.write("        minutes elapsed = "+ m + ":" + sstr + "  \n")
+    try: #handles if one category of dataset is not processed
+        writelog("")
+        writelog("PROCESSING COMPLETED SUCCESSFULLY")
+        # writelog("      total datasets evaluated: " + str(processedpublisheddatasets) + "\n")
+        writelog("      stage 1 pass count: " + str(passcount) + "\n")
+        # writelog("      stage 2 mitigating factor dataset count: " + str(mitigatingfactordatasetcount) + "\n")
+        writelog("      stage 3 needs review count: " + str(needsreviewcount) + "\n")
+        # writelog("      insufficient privileges to process: " + str(insufficientprivilegestoprocesscount) + "\n")
+        writelog("")
+        writelog("      minutes elapsed = "+ m + ":" + sstr + "  \n")
+    except Exception as e:
+        pass

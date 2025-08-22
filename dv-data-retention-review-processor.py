@@ -71,6 +71,13 @@ def loadlatestoutputfile(directory, pattern):
     print(f"No file with '{pattern}' was found in any subfolder of '{directory}'.")
     return None
 
+#function to indent text
+def singletab(text, indent="   "):
+    return '\n'.join([indent + line for line in text.split('\n')])
+def doubletab(text):
+    indent = "\t\t"  # Two tab characters
+    return '\n'.join([indent + line for line in text.split('\n')])
+
 # Open and read config parameters from .env file
 configfile = ".env"
 with open(configfile) as envfile:
@@ -110,14 +117,14 @@ if not os.path.isdir("./outputs/" + todayDate):
 #create summary file
 with open("outputs/" + todayDate + "/all_results_summary.txt", "w") as resultssummaryfile:
     resultssummaryfile.write("Results summary " + todayDate + "\n\n")
-    resultssummaryfile.write("   REVIEW CRITERIA \n")
-    resultssummaryfile.write("        UNPUBLISHED DATA years since created = "+ str(config['unpublisheddatasetreviewthresholdinyears']) +"  \n")
-    resultssummaryfile.write("        UNPUBLISHED DATA dataset size threshold = "+ str(config['unpublisheddatasetreviewthresholdingb']) +"  \n")
-    resultssummaryfile.write("        PUBLISHED DATA years since published = "+ str(config['publisheddatasetreviewthresholdinyears']) +"\n")
-    resultssummaryfile.write("        PUBLISHED DATA dataset size threshold = "+ str(config['publisheddatasetreviewthresholdingb']) +"  \n")
-    resultssummaryfile.write("        PUBLISHED DATA mitigating factor minimum downloads = "+ str(config['mitigatingfactormindownloadcount']) +"\n")
-    resultssummaryfile.write("        PUBLISHED DATA mitigating factor: minimum citations = "+ str(config['mitigatingfactormincitationcount']) +"  \n\n")
-    resultssummaryfile.write("        CROSSVALIDATION PERFORMED: "+ str(config['crossvalidate']) +"  \n\n")
+    resultssummaryfile.write(singletab("REVIEW CRITERIA")) + "\n"
+    resultssummaryfile.write(doubletab("UNPUBLISHED DATA years since created = ") + str(config['unpublisheddatasetreviewthresholdinyears']) +"  \n")
+    resultssummaryfile.write(doubletab("UNPUBLISHED DATA dataset size threshold = ")+ str(config['unpublisheddatasetreviewthresholdingb']) +"  \n")
+    resultssummaryfile.write(doubletab("PUBLISHED DATA years since published = ") + str(config['publisheddatasetreviewthresholdinyears']) +"\n")
+    resultssummaryfile.write(doubletab("PUBLISHED DATA dataset size threshold = ") + str(config['publisheddatasetreviewthresholdingb']) +"  \n")
+    resultssummaryfile.write(doubletab("PUBLISHED DATA mitigating factor minimum downloads = ") + str(config['mitigatingfactormindownloadcount']) +"\n")
+    resultssummaryfile.write(doubletab("PUBLISHED DATA mitigating factor: minimum citations = ") + str(config['mitigatingfactormincitationcount']) +"  \n\n")
+    resultssummaryfile.write(doubletab("CROSSVALIDATION PERFORMED: ") + str(config['crossvalidate']) +"  \n\n")
 
 #set initial counts to 0
 totaldatasetsindataverse = 0
@@ -267,8 +274,8 @@ if config["processdeaccessioneddatasets"] == "True":
         print(f"Error processing: {str(e)}")
 
     with open("outputs/" + todayDate + "/all_results_summary.txt", "a") as resultssummaryfile:
-        resultssummaryfile.write("   DEACCESSIONED DATASETS\n")
-        resultssummaryfile.write("        number evaluated: " + str(deaccessioneddatasetcounter) + "\n\n")
+        resultssummaryfile.write(singletab("DEACCESSIONED DATASETS") + "\n")
+        resultssummaryfile.write(doubletab("number evaluated: ") + str(deaccessioneddatasetcounter) + "\n\n")
 
     # while currentpageofresults < pagecount:
 
@@ -547,10 +554,10 @@ if config["processpublisheddatasets"] == "True":
 
 
     with open("outputs/" + todayDate + "/all_results_summary.txt", "a") as resultssummaryfile:
-        resultssummaryfile.write("   PUBLISHED DATASETS\n")
-        resultssummaryfile.write("        number evaluated: " + str(publisheddatasetcounter) + "\n")
-        resultssummaryfile.write("        stage 1 pass count: " + str(passcount) + "\n")
-        resultssummaryfile.write("        stage 1 needs review count: " + str(needsreviewcount) + "\n\n")
+        resultssummaryfile.write(singletab("PUBLISHED DATASETS") + "\n")
+        resultssummaryfile.write(doubletab("number evaluated: ") + str(publisheddatasetcounter) + "\n")
+        resultssummaryfile.write(doubletab("stage 1 pass count: ") + str(passcount) + "\n")
+        resultssummaryfile.write(doubletab("stage 1 needs review count: ") + str(needsreviewcount) + "\n\n")
 
 
     writelog("\n\nFINISHED PROCESSING PUBLISHED DATASETS\n\n")
@@ -833,10 +840,10 @@ if config["processunpublisheddatasets"] == "True":
 
 
     with open("outputs/" + todayDate + "/all_results_summary.txt", "a") as resultssummaryfile:
-        resultssummaryfile.write("   UNPUBLISHED DATASETS\n")
-        resultssummaryfile.write("        number evaluated: " + str(unpublisheddatasetcounter) + "\n")
-        resultssummaryfile.write("        stage 1 pass count: " + str(passcount) + "\n")
-        resultssummaryfile.write("        stage 1 needs review count: " + str(needsreviewcount) + "\n\n")
+        resultssummaryfile.write(singletab("UNPUBLISHED DATASETS")) + "\n"
+        resultssummaryfile.write(doubletab("number evaluated: ") + str(unpublisheddatasetcounter) + "\n")
+        resultssummaryfile.write(doubletab("stage 1 pass count: ") + str(passcount) + "\n")
+        resultssummaryfile.write(doubletab("stage 1 needs review count: ") + str(needsreviewcount) + "\n\n")
 
 
     writelog("\n\nFINISHED PROCESSING UNPUBLISHED DATASETS\n\n")
@@ -1427,27 +1434,26 @@ with open("outputs/" + todayDate + "/all_results_summary.txt", "a") as resultssu
 
     if crossvalidate:
         resultssummaryfile.write("\n")
+        resultssummaryfile.write(singletab("USER ADMIN PRIVILEGES") + "\n")
         unpublishedcounts = draftscombined['admin_privileges'].value_counts()
         resultssummaryfile.write('Admin privileges for unpublished datasets:\n')
-        resultssummaryfile.write(unpublishedcounts.to_string())
-        resultssummaryfile.write("\n")
+        resultssummaryfile.write(doubletab(unpublishedcounts.to_string())) + "\n\n"
         publishedcounts = publishedcombined['admin_privileges'].value_counts()
         resultssummaryfile.write('Admin privileges for published datasets:\n')
-        resultssummaryfile.write(publishedcounts.to_string())
-        resultssummaryfile.write("\n")
+        resultssummaryfile.write(doubletab(publishedcounts.to_string())) + "\n\n"
 
     resultssummaryfile.write("\n")
-    resultssummaryfile.write("   RUN TIME\n")
-    resultssummaryfile.write("        minutes elapsed = "+ m + ":" + sstr + "  \n")
+    resultssummaryfile.write(singletab("RUN TIME") + "\n")
+    resultssummaryfile.write(doubletab("minutes elapsed = ")+ m + ":" + sstr + "  \n")
     try: #handles if one category of dataset is not processed
         writelog("")
         writelog("PROCESSING COMPLETED SUCCESSFULLY")
         # writelog("      total datasets evaluated: " + str(processedpublisheddatasets) + "\n")
-        writelog("      stage 1 pass count: " + str(passcount) + "\n")
+        writelog(singletab("stage 1 pass count: ") + str(passcount) + "\n")
         # writelog("      stage 2 mitigating factor dataset count: " + str(mitigatingfactordatasetcount) + "\n")
-        writelog("      stage 3 needs review count: " + str(needsreviewcount) + "\n")
+        writelog(singletab("stage 3 needs review count: ") + str(needsreviewcount) + "\n")
         # writelog("      insufficient privileges to process: " + str(insufficientprivilegestoprocesscount) + "\n")
         writelog("")
-        writelog("      minutes elapsed = "+ m + ":" + sstr + "  \n")
+        writelog(singletab("minutes elapsed = ")+ m + ":" + sstr + "  \n")
     except Exception as e:
         pass

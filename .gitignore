@@ -9,6 +9,7 @@ logs/*
 archive/*
 outputs/*
 example-metadata.py
+tdr-dataverse-reports/*
 
 
 # C extensions

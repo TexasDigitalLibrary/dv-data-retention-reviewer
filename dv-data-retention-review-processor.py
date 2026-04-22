@@ -43,7 +43,7 @@ def loadlatestdataversereport(tdrdataversereports, pattern):
         print(f"The most recent file '{latest_file}' has been loaded successfully.")
         return df
 
-#function to search for the most recent output subfolder and then a specified CSV file within it    
+#function to search for the most recent output subfolder and then a specified CSV file within it
 def loadlatestoutputfile(directory, pattern):
     subfolders = [f for f in os.listdir(directory) if os.path.isdir(os.path.join(directory, f))]
 
@@ -160,7 +160,7 @@ if config["processpublisheddatasets"] == "True":
     writerowtocsv(publishedmitigatingfactorcsvpath,publishedheaderrow,"w")
 
 if config["processdeaccessioneddatasets"] == "True":
-    writerowtocsv(deaccessionedcsvpath,deaccessionedheaderrow,"w")  
+    writerowtocsv(deaccessionedcsvpath,deaccessionedheaderrow,"w")
 
 writerowtocsv(couldnotbeevaluatedcsvpath,publishedheaderrow,"w")
 
@@ -266,7 +266,7 @@ if config["processdeaccessioneddatasets"] == "True":
 
 
             writerowtocsv(deaccessionedcsvpath, datasetdetailsrow, "a")
-        
+
         # currentpageofresults += pagesize
         # pageincrement += 1
 
@@ -355,7 +355,7 @@ if config["processdeaccessioneddatasets"] == "True":
 
 
 if config["processpublisheddatasets"] == "True":
-    writelog("STARTING NEW METHOD TO PROCESS PUBLISHED DATASETS \n\n") 
+    writelog("STARTING NEW METHOD TO PROCESS PUBLISHED DATASETS \n\n")
     publisheddatasetcounter = 0
     passcount = 0
     needsreviewcount = 0
@@ -369,7 +369,7 @@ if config["processpublisheddatasets"] == "True":
     pageincrement = config['pageincrement']
     pagesize = config['pagesize']
     publisheddata = []
-    
+
     while True:
         try:
             publisheddataqueryurl = f"https://dataverse.tdl.org/api/search?q=*&subtree={config['institutionaldataverse']}&start={currentpageofresults}&per_page={pagesize}&page={pageincrement}&fq=publicationStatus:{PUBLISHED_STATES}&type={DVOBJECT_TYPES}"
@@ -397,9 +397,9 @@ if config["processpublisheddatasets"] == "True":
                 writelog(f"NUMBER OF PUBLISHED RESULTS ACCESSIBLE UNDER USER ROLE STATUS: {total_count}")
                 break
         except Exception as e:
-            writelog(str(e))   
-    
-    if test == "True": 
+            writelog(str(e))
+
+    if test == "True":
         publisheddata = publisheddata[:subset]
 
     for publisheddatasetsprocessedcount, publisheddatasetinfo in enumerate(publisheddata):
@@ -508,7 +508,7 @@ if config["processpublisheddatasets"] == "True":
             writelog(f"Contact email: {authorcontactemail}")
 
             datepublished = current_version.get('publicationDate')
-            
+
             publishedyear = int(datepublished.lower().split("t")[0].split("-")[0])
             publishedmonth = int(datepublished.lower().split("t")[0].split("-")[1])
             publishedday = int(datepublished.lower().split("t")[0].split("-")[2])
@@ -561,7 +561,7 @@ if config["processpublisheddatasets"] == "True":
 
 
     writelog("\n\nFINISHED PROCESSING PUBLISHED DATASETS\n\n")
-    
+
     # while currentpageofresults < pagecount:
 
     #     try:
@@ -585,7 +585,7 @@ if config["processpublisheddatasets"] == "True":
             # print("\n\n")
 
 
-        #         total = 
+        #         total =
         # print "=== Page", page, "==="
         # print "start:", start, " total:", total
         # for i in data['data']['items']:
@@ -627,7 +627,7 @@ if config["processunpublisheddatasets"] == "True":
     # DVOBJECT_TYPES="dataset"
     # PUBLISHED_STATES="Draft"
 
-    
+
     # unpublisheddatasetcounter = 0
     # passcount = 0
     # needsreviewcount = 0
@@ -692,10 +692,10 @@ if config["processunpublisheddatasets"] == "True":
                 writelog(f"NUMBER OF UNPUBLISHED RESULTS ACCESSIBLE UNDER USER ROLE STATUS: {total_count}")
                 break
         except Exception as e:
-            writelog(str(e))   
-                
+            writelog(str(e))
+
             # writelog("https://dataverse.tdl.org/api/mydata/retrieve?role_ids=" + ROLE_IDS + "&dvobject_types=" +DVOBJECT_TYPES + "&published_states=" +PUBLISHED_STATES + "&selected_page=" + str(currentpageofresults))
-            
+
             # unpublisheddatasetlist = requests.get("https://dataverse.tdl.org/api/mydata/retrieve?role_ids=" + ROLE_IDS + "&dvobject_types=" + DVOBJECT_TYPES + "&published_states=" + PUBLISHED_STATES + "&selected_page=" + str(currentpageofresults), headers={"X-Dataverse-key":config['dataverse_api_key']})
 
             # unpublisheddata = json.loads(unpublisheddatasetlist.text)['data']
@@ -956,7 +956,7 @@ if config["processunpublisheddatasets"] == "True":
     #             dataversehierarchy = []
     #             spacing = "   "
 
-                
+
     #             while ispartofdata['@id'] != 'https://dataverse.tdl.org/dataverse/root':
     #                 try:
     #                     dataversehierarchy.append(ispartofdata['schema:name'])
@@ -1135,7 +1135,7 @@ if config["processunpublisheddatasets"] == "True":
     #                                 else:
     #                                     writelog("   Access Level: Restricted Access (request must be submitted to access files)")
     #                                 writelog("  " + k + ": " +  str(v))
-                                    
+
     #                             if k == "author":
     #                                 writelog("   Author: " + str(v))
     #                             if k == "citation:datasetContact":
@@ -1413,7 +1413,7 @@ if crossvalidate == "True":
             except Exception as e:
                 writelog(str(e))
                 break
-    
+
     #read the CSV back in
     pattern7 = 'all-published-admin-privileges'
     adminpublished, specificoutputdirectory = loadlatestoutputfile(outputsdirectory, pattern7)

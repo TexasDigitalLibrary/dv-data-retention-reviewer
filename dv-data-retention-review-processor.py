@@ -117,7 +117,7 @@ if not os.path.isdir("./outputs/" + todayDate):
 #create summary file
 with open("outputs/" + todayDate + "/all_results_summary.txt", "w") as resultssummaryfile:
     resultssummaryfile.write("Results summary " + todayDate + "\n\n")
-    resultssummaryfile.write(singletab("REVIEW CRITERIA")) + "\n"
+    resultssummaryfile.write(singletab("REVIEW CRITERIA") + "\n")    
     resultssummaryfile.write(doubletab("UNPUBLISHED DATA years since created = ") + str(config['unpublisheddatasetreviewthresholdinyears']) +"  \n")
     resultssummaryfile.write(doubletab("UNPUBLISHED DATA dataset size threshold = ")+ str(config['unpublisheddatasetreviewthresholdingb']) +"  \n")
     resultssummaryfile.write(doubletab("PUBLISHED DATA years since published = ") + str(config['publisheddatasetreviewthresholdinyears']) +"\n")
@@ -840,7 +840,7 @@ if config["processunpublisheddatasets"] == "True":
 
 
     with open("outputs/" + todayDate + "/all_results_summary.txt", "a") as resultssummaryfile:
-        resultssummaryfile.write(singletab("UNPUBLISHED DATASETS")) + "\n"
+        resultssummaryfile.write(singletab("UNPUBLISHED DATASETS") + "\n")
         resultssummaryfile.write(doubletab("number evaluated: ") + str(unpublisheddatasetcounter) + "\n")
         resultssummaryfile.write(doubletab("stage 1 pass count: ") + str(passcount) + "\n")
         resultssummaryfile.write(doubletab("stage 1 needs review count: ") + str(needsreviewcount) + "\n\n")
@@ -1432,15 +1432,15 @@ with open("outputs/" + todayDate + "/all_results_summary.txt", "a") as resultssu
     else:
         sstr = str(s)
 
-    if crossvalidate:
+    if crossvalidate == "True":
         resultssummaryfile.write("\n")
         resultssummaryfile.write(singletab("USER ADMIN PRIVILEGES") + "\n")
         unpublishedcounts = draftscombined['admin_privileges'].value_counts()
         resultssummaryfile.write('Admin privileges for unpublished datasets:\n')
-        resultssummaryfile.write(doubletab(unpublishedcounts.to_string())) + "\n\n"
+        resultssummaryfile.write(doubletab(unpublishedcounts.to_string()) + "\n\n")
         publishedcounts = publishedcombined['admin_privileges'].value_counts()
         resultssummaryfile.write('Admin privileges for published datasets:\n')
-        resultssummaryfile.write(doubletab(publishedcounts.to_string())) + "\n\n"
+        resultssummaryfile.write(doubletab(publishedcounts.to_string()) + "\n\n")
 
     resultssummaryfile.write("\n")
     resultssummaryfile.write(singletab("RUN TIME") + "\n")

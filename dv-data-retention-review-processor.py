@@ -8,11 +8,30 @@ from datetime import datetime
 from dateutil.relativedelta import relativedelta
 import time
 import math
-import win32com.client
 import numpy as np
 import pandas as pd
 
+
+if sys.platform == "darwin":
+    pass
+
+if sys.platform == "linux":
+    pass
+
+if sys.platform == "win32":
+    import win32com.client
+
 print("all packages imported successfully")
+
+
+# Open and read config parameters from .env file
+with open(".env", "r") as configfile:
+    config = json.loads(configfile.read())
+
+
+print(config['test'])
+
+input("pause")
 
 #define today's date for quick calling
 todayDate = datetime.now().strftime("%Y-%m-%d")
@@ -74,18 +93,15 @@ def loadlatestoutputfile(directory, pattern):
 #function to indent text
 def singletab(text, indent="   "):
     return '\n'.join([indent + line for line in text.split('\n')])
+
 def doubletab(text):
     indent = "\t\t"  # Two tab characters
     return '\n'.join([indent + line for line in text.split('\n')])
 
-# Open and read config parameters from .env file
-configfile = ".env"
-with open(configfile) as envfile:
-    config = json.loads(envfile.read())
+
 
 #define whether to run in test mode
-test = config['test']
-if test == "True":
+if config['test']:
     subset = 10
     print(f"only testing with the first {subset} records")
 
@@ -117,7 +133,7 @@ if not os.path.isdir("./outputs/" + todayDate):
 #create summary file
 with open("outputs/" + todayDate + "/all_results_summary.txt", "w") as resultssummaryfile:
     resultssummaryfile.write("Results summary " + todayDate + "\n\n")
-    resultssummaryfile.write(singletab("REVIEW CRITERIA")) + "\n"
+    resultssummaryfile.write(singletab("REVIEW CRITERIA") + "\n")
     resultssummaryfile.write(doubletab("UNPUBLISHED DATA years since created = ") + str(config['unpublisheddatasetreviewthresholdinyears']) +"  \n")
     resultssummaryfile.write(doubletab("UNPUBLISHED DATA dataset size threshold = ")+ str(config['unpublisheddatasetreviewthresholdingb']) +"  \n")
     resultssummaryfile.write(doubletab("PUBLISHED DATA years since published = ") + str(config['publisheddatasetreviewthresholdinyears']) +"\n")
@@ -150,16 +166,16 @@ deaccessionedheaderrow = ["doi","title","author", "author contact email", "lates
 
 
 #create output CSV files if config file indicates they should be created
-if config["processunpublisheddatasets"] == "True":
+if config["processunpublisheddatasets"]:
     writerowtocsv(unpublishedneedsreviewcsvpath,unpublishedheaderrow,"w")
     writerowtocsv(unpublishednoreviewneededcsvpath,unpublishedheaderrow,"w")
 
-if config["processpublisheddatasets"] == "True":
+if config["processpublisheddatasets"]:
     writerowtocsv(publishedneedsreviewcsvpath,publishedheaderrow,"w")
     writerowtocsv(publishednoreviewneededcsvpath,publishedheaderrow,"w")
     writerowtocsv(publishedmitigatingfactorcsvpath,publishedheaderrow,"w")
 
-if config["processdeaccessioneddatasets"] == "True":
+if config["processdeaccessioneddatasets"]:
     writerowtocsv(deaccessionedcsvpath,deaccessionedheaderrow,"w")
 
 writerowtocsv(couldnotbeevaluatedcsvpath,publishedheaderrow,"w")
@@ -211,7 +227,7 @@ writelog("All packages imported and all major script parameters defined successf
 
 
 #RETRIEVE INFORMATION ABOUT DEACCESSIONED DATASETS
-if config["processdeaccessioneddatasets"] == "True":
+if config["processdeaccessioneddatasets"]:
     writelog("\n\nSTARTING TO PROCESS DEACCESSIONED DATASETS\n\n")
     ROLE_IDS = str(1) #admin role
     DVOBJECT_TYPES="Dataset"
@@ -354,7 +370,7 @@ if config["processdeaccessioneddatasets"] == "True":
 #TRY NEW METHOD TO RETRIEVE INFO ABOUT ALL PUBLISHED DATASETS
 
 
-if config["processpublisheddatasets"] == "True":
+if config["processpublisheddatasets"]:
     writelog("STARTING NEW METHOD TO PROCESS PUBLISHED DATASETS \n\n")
     publisheddatasetcounter = 0
     passcount = 0
@@ -399,7 +415,7 @@ if config["processpublisheddatasets"] == "True":
         except Exception as e:
             writelog(str(e))
 
-    if test == "True":
+    if config['test']:
         publisheddata = publisheddata[:subset]
 
     for publisheddatasetsprocessedcount, publisheddatasetinfo in enumerate(publisheddata):
@@ -619,7 +635,7 @@ if config["processpublisheddatasets"] == "True":
 
 
 #RETRIEVE INFORMATION ABOUT UNPUBLISHED DATASETS
-if config["processunpublisheddatasets"] == "True":
+if config["processunpublisheddatasets"]:
 
     # writelog("STARTING TO PROCESS UNPUBLISHED DATASETS \n\n")
 
@@ -707,7 +723,7 @@ if config["processunpublisheddatasets"] == "True":
             # if currentpageofresults == 1:
             #     writelog("NUMBER OF UNPUBLISHED RESULTS ACCESSIBLE UNDER USER ROLE STATUS "+ ROLE_IDS +": " + str(unpublisheddata['pagination']['numResults']))
 
-    if test == "True":
+    if config['test']:
         unpublisheddata = unpublisheddata[:subset]
 
     for unpublisheddatasetsprocessedcount, unpublisheddatasetinfo in enumerate(unpublisheddata):
@@ -840,7 +856,7 @@ if config["processunpublisheddatasets"] == "True":
 
 
     with open("outputs/" + todayDate + "/all_results_summary.txt", "a") as resultssummaryfile:
-        resultssummaryfile.write(singletab("UNPUBLISHED DATASETS")) + "\n"
+        resultssummaryfile.write(singletab("UNPUBLISHED DATASETS") + "\n")
         resultssummaryfile.write(doubletab("number evaluated: ") + str(unpublisheddatasetcounter) + "\n")
         resultssummaryfile.write(doubletab("stage 1 pass count: ") + str(passcount) + "\n")
         resultssummaryfile.write(doubletab("stage 1 needs review count: ") + str(needsreviewcount) + "\n\n")
@@ -866,7 +882,7 @@ if config["processunpublisheddatasets"] == "True":
 
 
 #ORIGINAL PROCESS TO RETRIEVE INFORMATION ABOUT PUBLISHED DATASETS THAT DOES NOT SUCCESSFULLY FIND ALL DATASETS
-# if config["processpublisheddatasets"] == "True":
+# if config["processpublisheddatasets"]:
 
 #     call = config['dataverse_api_host'] + "/api/info/metrics/uniquedownloads?parentAlias=" + config['institutionaldataverse']
 #     writelog("data request url = " + call)
@@ -1022,7 +1038,7 @@ if config["processunpublisheddatasets"] == "True":
 
     #                     writelog("   size = " + str(datasetsizevaluegb) + "GB")
 
-    #                     if config['showdatasetdetails'] == "True":
+    #                     if config['showdatasetdetails']:
     #                         writelog("   Dataset DOI: " + str(doi) + "")
     #                         writelog("   Dataset ID: " + str(datasetid) + "")
     #                         writelog("   Unique Downloads: " + uniquedownloads + "")
@@ -1249,7 +1265,7 @@ if config["processunpublisheddatasets"] == "True":
 
 
 #identifying published datasets that you do not have admin privileges to process
-if crossvalidate == "True":
+if config['crossvalidate'] & sys.platform == "win32":
     if config['email'] == "Outlook":
         #define search parameters
         sender = "dataverse@tdl.org" #email address TDR uses to send biweekly reports
@@ -1421,6 +1437,10 @@ if crossvalidate == "True":
     publishedcombined = pd.merge(publishedall, adminpublished, on='doi', how='left')
     publishedcombined['admin_privileges'] = np.where(publishedcombined['version_y'].isnull(), 'No privileges', 'Privileges') #can use any column that is always filled in the file that was just created but be aware you may need to add '_y' if the same column appears twice
     publishedcombined.to_csv(specificoutputdirectory+f'/{todayDate}-{str(config['institutionaldataverse'])}-published-cross-validation.csv')
+
+
+
+
 
 
 with open("outputs/" + todayDate + "/all_results_summary.txt", "a") as resultssummaryfile:

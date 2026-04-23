@@ -29,10 +29,6 @@ with open(".env", "r") as configfile:
     config = json.loads(configfile.read())
 
 
-print(config['test'])
-
-input("pause")
-
 #define today's date for quick calling
 todayDate = datetime.now().strftime("%Y-%m-%d")
 
@@ -142,6 +138,7 @@ with open("outputs/" + todayDate + "/all_results_summary.txt", "w") as resultssu
     resultssummaryfile.write(doubletab("PUBLISHED DATA mitigating factor: minimum citations = ") + str(config['mitigatingfactormincitationcount']) +"  \n\n")
     resultssummaryfile.write(doubletab("CROSSVALIDATION PERFORMED: ") + str(config['crossvalidate']) +"  \n\n")
 
+
 #set initial counts to 0
 totaldatasetsindataverse = 0
 totaldatasetsindataverseovertenyearsold = 0
@@ -246,7 +243,14 @@ if config["processdeaccessioneddatasets"]:
         writelog(deaccessionedqueryurl)
 
         deaccessioneddatasetlist = requests.get(deaccessionedqueryurl, headers={"X-Dataverse-key":config['dataverse_api_key']})
-        deaccessioneddata = json.loads(deaccessioneddatasetlist.text)['data']
+
+        try:
+            deaccessioneddata = json.loads(deaccessioneddatasetlist.text)['data']
+        except:
+            input("Error returning results - check to make sure that API key is valid in .env. Press any key to continue.")
+
+        writelog("NUMBER OF DEACCESSIONED RESULTS: " + str(deaccessioneddata['total_count']))
+
         print(f"\nRetrieving {len(deaccessioneddata['items'])} {PUBLISHED_STATES} datasets...\n")
         if currentpageofresults == 1:
             writelog("NUMBER OF DEACCESSIONED RESULTS: " + str(deaccessioneddata['total_count']))
@@ -1265,7 +1269,7 @@ if config["processunpublisheddatasets"]:
 
 
 #identifying published datasets that you do not have admin privileges to process
-if config['crossvalidate'] & sys.platform == "win32":
+if config['crossvalidate'] and sys.platform == "win32":
     if config['email'] == "Outlook":
         #define search parameters
         sender = "dataverse@tdl.org" #email address TDR uses to send biweekly reports

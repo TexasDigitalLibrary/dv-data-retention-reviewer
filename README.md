@@ -3,6 +3,8 @@ This repository contains code for a scripted process that reviews published and 
 
 It has been developed to specifically support data retention decision making in the Texas Data Repository (https://dataverse.tdl.org/) but designed to be adaptable for other Dataverse installations.
 
+# License: [3-Clause BSD](LICENSE.txt)
+
 
 ## Instructions for using the dv-data-retention-reviewer
 This scripted process has been designed to be run locally using Python 3. If you do not already have Python 3 on your machine you can download it at https://www.python.org/downloads/. Dependencies are managed using UV. If you do not have UV installed you can download it from https://docs.astral.sh/uv/getting-started/installation/.

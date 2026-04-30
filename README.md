@@ -3,8 +3,6 @@ This repository contains code for a scripted process that reviews published and 
 
 It has been developed to specifically support data retention decision making in the Texas Data Repository (https://dataverse.tdl.org/) but designed to be adaptable for other Dataverse installations.
 
-# License: [3-Clause BSD](LICENSE.txt)
-
 
 ## Instructions for using the dv-data-retention-reviewer
 This scripted process has been designed to be run locally using Python 3. If you do not already have Python 3 on your machine you can download it at https://www.python.org/downloads/. Dependencies are managed using UV. If you do not have UV installed you can download it from https://docs.astral.sh/uv/getting-started/installation/.
@@ -14,6 +12,8 @@ To download the code to your machine you can either clone the repository if you 
 To install the required dependencies using uv, navigate to the local repo directory on your computer in a terminal or command prompt window and then run `uv sync` to install the dependencies defined in uv.lock.
 
 The recommended approach for using this Python script is to utilize a code editor like VSCode for modifying the .env config file and running the script through your installed Python3 interpretor using the VSCode Python extension. Instructions for running a Python script in VSCode can be found at https://code.visualstudio.com/docs/python/run. In order to run the code successfully you should have admin privileges to all of the repositories in the dataverse that you want to run the script against and you will need a valid dataverse API key associated with your account in the Data instance. Instructions for obtaining and using a dataverse API key can be found at https://guides.dataverse.org/en/latest/api/getting-started.html.
+
+### License: [3-Clause BSD](LICENSE.txt)
 
 
 ### Configuring the .env file

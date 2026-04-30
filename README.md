@@ -13,6 +13,8 @@ To install the required dependencies using uv, navigate to the local repo direct
 
 The recommended approach for using this Python script is to utilize a code editor like VSCode for modifying the .env config file and running the script through your installed Python3 interpretor using the VSCode Python extension. Instructions for running a Python script in VSCode can be found at https://code.visualstudio.com/docs/python/run. In order to run the code successfully you should have admin privileges to all of the repositories in the dataverse that you want to run the script against and you will need a valid dataverse API key associated with your account in the Data instance. Instructions for obtaining and using a dataverse API key can be found at https://guides.dataverse.org/en/latest/api/getting-started.html.
 
+### License: [3-Clause BSD](LICENSE.txt)
+
 
 ### Configuring the .env file
 Once this repo is cloned locally, the .env.template file should be renamed to just .env and the contents of the file should be edited to replace the example values that are provided in the file by default with the correct values based on the institution for which the script will be run. Take care to preserve the JSON formatting of the .env file to ensure proper functioning of the Python scripts in the repository which depend on the parameters defined in the .env file.

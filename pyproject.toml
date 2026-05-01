@@ -1,6 +1,6 @@
 [project]
 name = "dv-data-retention-reviewer"
-version = "1.2-beta"
+version = "1.1-beta"
 description = "This repository contains code for a scripted process that reviews published and unpublished datasets in a Dataverse instance and produces reports which identify datasets to be considered for deaccessioning."
 readme = "README.md"
 requires-python = ">=3.14"

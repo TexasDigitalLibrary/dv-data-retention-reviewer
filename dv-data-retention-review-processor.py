@@ -53,6 +53,7 @@ def loadlatestdataversereport(tdrdataversereports, pattern):
     if not latest_file:
         print(f"No file with '{pattern}' was found in '{tdrdataversereports}'.")
         return None
+
     else:
         file_path = os.path.join(tdrdataversereports, latest_file)
         df = pd.read_excel(file_path, sheet_name='datasets', engine='openpyxl')
@@ -102,13 +103,6 @@ if config['test']:
     subset = 10
     print(f"only testing with the first {subset} records")
 
-#define whether to run cross-validation to ID how many published datasets you have admin privileges to
-crossvalidate = config['crossvalidate']
-
-#load API key
-headers_dataverse = {
-    'X-Dataverse-key': config['dataverse_api_key']
-}
 
 #if tdr-dataverse-reports directory does not yet exist, create it
 if not os.path.isdir("tdr-dataverse-reports"):
@@ -299,69 +293,6 @@ if config["processdeaccessioneddatasets"]:
         resultssummaryfile.write(singletab("DEACCESSIONED DATASETS") + "\n")
         resultssummaryfile.write(doubletab("number evaluated: ") + str(deaccessioneddatasetcounter) + "\n\n")
 
-    # while currentpageofresults < pagecount:
-
-    #     try:
-    #         currentpageofresults += 1
-
-    #         # deaccessionedqueryurl = "https://dataverse.tdl.org/api/mydata/retrieve?role_ids=" + ROLE_IDS + "&dvobject_types=" +DVOBJECT_TYPES + "&published_states=" +PUBLISHED_STATES + "&selected_page=" + str(currentpageofresults)
-
-    #         #substituting search endpoint
-    #         deaccessionedqueryurl = f"https://dataverse.tdl.org/api/search?q=*&subtree={config['institutionaldataverse']}&start={currentpageofresults}&page={pageincrement}&fq=publicationStatus:Deaccessioned&type=dataset"
-
-    #         writelog(deaccessionedqueryurl)
-
-    #         deaccessioneddatasetlist = requests.get(deaccessionedqueryurl, headers={"X-Dataverse-key":config['dataverse_api_key']})
-
-    #         deaccessioneddata = json.loads(deaccessioneddatasetlist.text)['data']
-    #         print(deaccessioneddata['start'])
-
-    #         pagecount = deaccessioneddata['pagination']['pageCount']
-
-    #         if currentpageofresults == 1:
-    #             writelog("NUMBER OF DEACCESSIONED RESULTS: " + str(deaccessioneddata['total_count']))
-
-
-    #         for deaccessioneddatasetsprocessedcount, deaccessioneddatasetinfo in enumerate(json.loads(deaccessioneddatasetlist.text)['data']['items']):
-
-    #             writelog("#" + str(deaccessioneddatasetsprocessedcount) + " DEACCESSIONED DATASET")
-    #             deaccessioneddatasetcounter += 1
-
-    #             for k,v in deaccessioneddatasetinfo.items():
-    #                 writelog("   " + k + ": "+ str(v))
-
-    #             doi = deaccessioneddatasetinfo['global_id']
-    #             entityid = deaccessioneddatasetinfo['entity_id']
-    #             title = deaccessioneddatasetinfo['name']
-    #             author = str(deaccessioneddatasetinfo['authors'])
-    #             authorcontactemail = ""
-    #             datecreated = str(deaccessioneddatasetinfo['createdAt'])
-    #             datelastupdated = str(deaccessioneddatasetinfo['updatedAt'])
-    #             yearssincecreation = ""
-    #             yearssincelastupdated = ""
-    #             datasetsizevaluegb = ""
-    #             fundinginfo = ""
-    #             datalicense = ""
-    #             latestversionstate = ""
-    #             exemptionnotes = ""
-    #             status = deaccessioneddatasetinfo['versionState']
-    #             deaccessionreason = deaccessioneddatasetinfo['deaccession_reason']
-
-    #             writelog("\n\n")
-
-    #             datasetdetailsrow = [doi, title, author, authorcontactemail, latestversionstate, datecreated, datelastupdated, yearssincecreation, yearssincelastupdated, datasetsizevaluegb, fundinginfo, exemptionnotes, status, deaccessionreason]
-
-
-    #             writerowtocsv(deaccessionedcsvpath, datasetdetailsrow, "a")
-
-
-    #     except Exception as e:
-    #         writelog(str(e))
-    #         break
-
-    # with open("outputs/" + todayDate + "/all_results_summary.txt", "a") as resultssummaryfile:
-    #     resultssummaryfile.write("   DEACCESSIONED DATASETS\n")
-    #     resultssummaryfile.write("        number evaluated: " + str(deaccessioneddatasetcounter) + "\n\n")
 
     writelog("\nFINISHED PROCESSING DEACCESSIONED DATASETS\n\n")
 
@@ -374,7 +305,6 @@ if config["processdeaccessioneddatasets"]:
 
 
 #TRY NEW METHOD TO RETRIEVE INFO ABOUT ALL PUBLISHED DATASETS
-
 
 if config["processpublisheddatasets"]:
     writelog("STARTING NEW METHOD TO PROCESS PUBLISHED DATASETS \n\n")
@@ -575,7 +505,6 @@ if config["processpublisheddatasets"]:
 
 
             try:
-
                 datasetdetailsrow = [doi, title, author, authorcontactemail, latestversionstate, datecreated, datelastupdated, datepublished, yearssincecreation, yearssincelastupdated, yearssincepublished, version, datasetsizevaluegb, uniquedownloads, totalcitations, fundinginfo, exemptionnotes]
 
                 #published dataset does not need review
@@ -588,7 +517,7 @@ if config["processpublisheddatasets"]:
                 else:
                     writerowtocsv(publishedneedsreviewcsvpath, datasetdetailsrow, "a")
                     needsreviewcount += 1
-                    
+
             except Exception as e:
                 writelog("ERROR: " + str(e))
 
@@ -664,35 +593,6 @@ if config["processpublisheddatasets"]:
 #RETRIEVE INFORMATION ABOUT UNPUBLISHED DATASETS
 if config["processunpublisheddatasets"]:
 
-    # writelog("STARTING TO PROCESS UNPUBLISHED DATASETS \n\n")
-
-    # ROLE_IDS = str(1) #admin role
-    # DVOBJECT_TYPES="dataset"
-    # PUBLISHED_STATES="Draft"
-
-
-    # unpublisheddatasetcounter = 0
-    # passcount = 0
-    # needsreviewcount = 0
-    # currentpageofresults = 0
-    # pagecount = config['paginationlimit']
-    # pageincrement = config['pageincrement']
-    # pagesize = config['pagesize']
-
-    # while currentpageofresults < pagecount:
-
-    #     try:
-    #         currentpageofresults += 1
-
-    #         unpublisheddataqueryurl = f"https://dataverse.tdl.org/api/search?q=*&subtree={config['institutionaldataverse']}&start={currentpageofresults}&per_page={pagesize}&page={pageincrement}&fq=publicationStatus:{PUBLISHED_STATES}&type={DVOBJECT_TYPES}"
-
-    #         writelog(unpublisheddataqueryurl)
-
-    #         unpublisheddatasetlist = requests.get(unpublisheddataqueryurl, headers={"X-Dataverse-key":config['dataverse_api_key']})
-
-    #         unpublisheddata = json.loads(unpublisheddatasetlist.text)['data']
-
-    #         print(f"\nRetrieving {len(unpublisheddata['items'])} {PUBLISHED_STATES} datasets...\n")
 
     writelog("STARTING TO PROCESS UNPUBLISHED DATASETS \n\n")
 
@@ -898,399 +798,6 @@ if config["processunpublisheddatasets"]:
 
 
 
-
-
-
-
-
-
-
-
-
-
-#ORIGINAL PROCESS TO RETRIEVE INFORMATION ABOUT PUBLISHED DATASETS THAT DOES NOT SUCCESSFULLY FIND ALL DATASETS
-# if config["processpublisheddatasets"]:
-
-#     call = config['dataverse_api_host'] + "/api/info/metrics/uniquedownloads?parentAlias=" + config['institutionaldataverse']
-#     writelog("data request url = " + call)
-
-#     datasetdoianddownloadcountlist = requests.get(call)
-#     print(datasetdoianddownloadcountlist)
-
-#     processedpublisheddatasets = 0
-#     mitigatingfactordatasetcount = 0
-#     passcount = 0
-#     needsreviewcount = 0
-#     insufficientprivilegestoprocesscount = 0
-    # writelog(datasetdoianddownloadcountlist.text)
-
-
-
-    # for datasetsprocessedcount, rawdoianddownloadcount in enumerate(datasetdoianddownloadcountlist.text.split("\n")):
-
-    #     if datasetsprocessedcount > 0:
-
-    #         try:
-
-    #             publishedneedsreview = False
-    #             unpublishedneedsreview = False
-    #             publishednoreviewneeded = False
-    #             unpublishednoreviewneeded = False
-    #             mitigatingfactorpresent = False
-
-    #             doi = ""
-    #             entityid = ""
-    #             title = ""
-    #             author = ""
-    #             authorcontactemail = ""
-    #             datedeposited = ""
-    #             datepublished = ""
-    #             datedistributed = ""
-    #             yearssincedeposit = ""
-    #             yearssincepublication = ""
-    #             yearssincedistribution = ""
-    #             uniquedownloads = ""
-    #             fundinginfo = ""
-    #             datalicense = ""
-    #             latestversionstate = ""
-    #             exemptionnotes = ""
-
-    #             # datasetretentionscore = 0
-    #             cleaneddoianddownloadcount = rawdoianddownloadcount.replace("\"","")
-    #             doi = cleaneddoianddownloadcount.split(",")[0]
-    #             uniquedownloads = cleaneddoianddownloadcount.split(",")[1]
-
-    #             writelog("\n\n\n")
-    #             writelog("#" + str(datasetsprocessedcount) + " Starting to process " + doi)
-
-    #             processedpublisheddatasets += 1
-
-    #             citationsrequest = requests.get("https://dataverse.tdl.org/api/datasets/:persistentId/makeDataCount/citations?persistentId=" + doi)
-    #             citations = json.loads(citationsrequest.content.decode("latin-1"))
-
-    #             datasetgeneralinforequest = requests.get("https://dataverse.tdl.org/api/datasets/:persistentId/?persistentId=" + doi)
-    #             datasetgeneralinforequest= json.loads(datasetgeneralinforequest.content.decode("latin-1"))
-
-    #             try:
-    #                 latestversionstate = str(datasetgeneralinforequest['data']['latestVersion']['versionState'])
-    #             except Exception as e:
-    #                 writelog(str(e))
-
-    #             writelog("versionState:  " + str(datasetgeneralinforequest['data']['latestVersion']['versionState']))
-    #             datasetid = str(datasetgeneralinforequest['data']['id'])
-
-
-    #             metadatarequest = requests.get("https://dataverse.tdl.org/api/datasets/"+datasetid+"/versions/1.0/metadata", headers={"X-Dataverse-key":config['dataverse_api_key']})
-    #             metadata = json.loads(metadatarequest.content.decode("latin-1"))
-
-    #             for k,v in metadata['data'].items():
-    #                 try:
-    #                     if len(str(v)) > 50:
-    #                         writelog("   " + k + ":  " + str(v)[:50].replace("\n") + "....")
-    #                     else:
-    #                         writelog("   " + k + ":  " + str(v))
-    #                 except:
-    #                     pass
-
-    #             # datasetsizerequest = requests.get("https://dataverse.tdl.org/api/datasets/"+datasetid+"/storagesize", headers={"X-Dataverse-key":config['dataverse_api_key']})
-    #             # datasetsize = json.loads(datasetsizerequest.content.decode("latin-1"))
-
-    #             ispartofdata = metadata['data']['schema:isPartOf']
-    #             dataversehierarchy = []
-    #             spacing = "   "
-
-
-    #             while ispartofdata['@id'] != 'https://dataverse.tdl.org/dataverse/root':
-    #                 try:
-    #                     dataversehierarchy.append(ispartofdata['schema:name'])
-    #                     writelog(spacing + "is part of " + ispartofdata['schema:name'])
-    #                     spacing += spacing
-    #                     ispartofdata = ispartofdata['schema:isPartOf']
-    #                 except Exception as e:
-    #                     print(str(e))
-
-    #             try:
-    #                 dataversehierarchy.append('TDR Root')
-    #                 dataversehierarchy.reverse()
-    #                 dataversehierarchy.append("dataset")
-
-    #                 title = metadata['data']['title']
-    #                 author = metadata['data']['citation:datasetContact']['citation:datasetContactName']
-    #                 authorcontactemail = metadata['data']['citation:datasetContact']['citation:datasetContactEmail']
-    #             except Exception as e:
-    #                 print(str(e))
-
-    #             # creationyear = int(datecreated.lower().split("t")[0].split("-")[0])
-    #             # creationmonth = int(datecreated.lower().split("t")[0].split("-")[1])
-    #             # creationday = int(datecreated.lower().split("t")[0].split("-")[2])
-    #             #
-    #             # writelog("creationyear = " + str(creationyear))
-    #             # writelog("creationmonth = " + str(creationmonth))
-    #             # writelog("creationday = " + str(creationday))
-    #             #
-    #             # yearssincecreation = float(relativedelta(datetime.now(), datetime(creationyear,creationmonth,creationday,0,0,0,0)).years + (relativedelta(datetime.now(), datetime(creationyear,creationmonth,creationday,0,0,0,0)).months/12) + (relativedelta(datetime.now(), datetime(creationyear,creationmonth,creationday,0,0,0,0)).days/365))
-    #             #
-    #             # writelog("yearssincecreation = " + str(yearssincecreation))
-    #             #
-    #             #
-    #             # lastupdatedyear = int(datecreated.lower().split("t")[0].split("-")[0])
-    #             # lastupdatedmonth = int(datecreated.lower().split("t")[0].split("-")[1])
-    #             # lastupdatedday = int(datecreated.lower().split("t")[0].split("-")[2])
-    #             #
-    #             # writelog("lastupdatedyear = " + str(lastupdatedyear))
-    #             # writelog("lastupdatedmonth = " + str(lastupdatedmonth))
-    #             # writelog("lastupdatedday = " + str(lastupdatedday))
-    #             #
-    #             # yearssincelastupdated = float(relativedelta(datetime.now(), datetime(lastupdatedyear,lastupdatedmonth,lastupdatedday,0,0,0,0)).years + (relativedelta(datetime.now(), datetime(lastupdatedyear,lastupdatedmonth,lastupdatedday,0,0,0,0)).months/12) + (relativedelta(datetime.now(), datetime(creationyear,creationmonth,creationday,0,0,0,0)).days/365))
-    #             #
-    #             # writelog("yearssincelastupdated = " + str(yearssincelastupdated))
-
-
-
-
-    #             if config['institutionname'] + " Dataverse Collection" not in str(metadata['data']['schema:isPartOf']) and config['institutionaldataverse'] != "*":
-    #                 writelog(spacing + " skipping dataset because it is in not in the " + config['institutionaldataverse'] + " dataverse")
-
-
-    #             if str("https://dataverse.tdl.org/dataverse/" + config['institutionaldataverse']) in str(metadata) or config['institutionaldataverse'] == "*":
-    #                 writelog(spacing + " dataset is within a dataverse that is designated for processing, continuing to evaluate dataset...")
-
-
-    #                 writelog("   preparing to request dataset size.....")
-
-    #                 try:
-    #                     datasetsizerequest = requests.get("https://dataverse.tdl.org/api/datasets/" + str(datasetid) + "/storagesize", headers={"X-Dataverse-key":config['dataverse_api_key']})
-    #                     datasizemessage = str(json.loads(datasetsizerequest.text)['data'])
-    #                     datasetsizevaluegb = float(int(datasizemessage.split("dataset:")[1].split(" bytes")[0].strip().replace(",","")) / 1073741824)
-
-    #                     writelog("   size = " + str(datasetsizevaluegb) + "GB")
-
-    #                     if config['showdatasetdetails']:
-    #                         writelog("   Dataset DOI: " + str(doi) + "")
-    #                         writelog("   Dataset ID: " + str(datasetid) + "")
-    #                         writelog("   Unique Downloads: " + uniquedownloads + "")
-    #                         writelog("   Citation Count: " + str(len(citations['data'])) + "")
-    #                         writelog("   Citation List: " + str(citations['data']) + "")
-    #                         writelog("   Corresponding Author Name: " + metadata['data']['citation:datasetContact']['citation:datasetContactName'] + "")
-    #                         writelog("   Corresponding Author Email: " + metadata['data']['citation:datasetContact']['citation:datasetContactEmail'] + "")
-    #                         writelog("   Dataset Size (GB): " + str(round(datasetsizevaluegb,4)) + "")
-    #                         # writelog("   Grant Number(s): " + str(metadata['data']))
-    #                         writelog("   Data Access Restrictions: " + str(metadata['data']['dvcore:fileTermsOfAccess']['dvcore:fileRequestAccess']) + "")
-
-    #                         try:
-    #                             writelog("   Deposit Date: " + str(metadata['data']['dateOfDeposit']) + "")
-    #                             datedeposited = str(str(metadata['data']['dateOfDeposit']))
-    #                             deposityear = int(metadata['data']['dateOfDeposit'].split("-")[0])
-    #                             depositmonth = int(metadata['data']['dateOfDeposit'].split("-")[1])
-    #                             depositday = int(metadata['data']['dateOfDeposit'].split("-")[2])
-    #                             yearssincepublication = float(relativedelta(datetime.now(), datetime(deposityear,depositmonth,depositday,0,0,0,0)).years + (relativedelta(datetime.now(), datetime(deposityear,depositmonth,depositday,0,0,0,0)).months/12))
-    #                             yearssincepublication = round(yearssincepublication,3)
-    #                             # writelog("   deposityear = " + str(deposityear))
-    #                             # writelog("   depositmonth = " + str(depositmonth))
-    #                             # writelog("   depositday = " + str(depositday))
-    #                             # writelog("   yearssincepublication = " + str(yearssincepublication))
-    #                         except Exception as e:
-    #                             writelog("ERROR: " + str(e) + "\n\n")
-
-    #                         try:
-    #                             writelog("   Publication Date: " + str(metadata['data']['schema:datePublished']) + "")
-    #                             datepublished = str(metadata['data']['schema:datePublished'])
-
-    #                         except Exception as e:
-    #                             writelog("   Publication Date: ")
-    #                             datepublished = ""
-
-    #                         try:
-    #                             writelog("   Distribution Date: " + str(metadata['data']['distributionDate']) + "")
-    #                             datedistributed = str(metadata['data']['distributionDate'])
-
-    #                         except Exception as e:
-    #                             writelog("   Distribution Date: ")
-    #                             datedistributed = ""
-
-
-    #                     # if "ERROR" in str(datasetsizevaluegb):
-    #                     #     input(">>>>")
-    #                     #     datasetsizevaluegb = ""
-    #                     #     datasetdetailsrow = [doi, title, author, authorcontactemail, latestversionstate, datedeposited, datepublished, datedistributed, yearssincedeposit, yearssincepublication, yearssincedistribution, datasetsizevaluegb, uniquedownloads, str(len(citations['data'])), fundinginfo, exemptionnotes]
-
-    #                     #     writerowtocsv(couldnotbeevaluatedcsvpath, datasetdetailsrow, "a")
-    #                     #     writelog("      ERROR: " + str(datasetsize))
-    #                     #     writelog("      this dataset could not be evaluated because of insufficient privileges to access data size information")
-
-
-
-    #                     # else:
-    #                         # datasetsizevaluegb = int(str(datasetsize).split("dataset:")[1].split(" b")[0].strip().replace(",",""))
-    #                         # datasetsizevaluegb = round((datasetsizevaluegb/1073741824),3)
-
-    #                         # distributionyear = int(metadata['data']['citation:distributionDate'].split("-")[0])
-    #                         # distributionmonth = int(metadata['data']['citation:distributionDate'].split("-")[1])
-    #                         # distributionday = int(metadata['data']['citation:distributionDate'].split("-")[2])
-    #                         #
-    #                         # writelog("   distributionyear = " + str(distributionyear))
-    #                         # writelog("   distributionmonth = " + str(distributionmonth))
-    #                         # writelog("   distributionday = " + str(distributionday))
-    #                         #
-    #                         # yearssincedistribution = float(relativedelta(datetime.now(), datetime(distributionyear,distributionmonth,distributionday,0,0,0,0)).years + (relativedelta(datetime.now(), datetime(distributionyear,distributionmonth,distributionday,0,0,0,0)).months/12))
-    #                         # writelog("   yearssincedistribution = " + str(yearssincedistribution))
-
-
-    #                         # publicationyear = int(metadata['data']['schema:datePublished'].split("-")[0])
-    #                         # publicationmonth = int(metadata['data']['schema:datePublished'].split("-")[1])
-    #                         # publicationday = int(metadata['data']['schema:datePublished'].split("-")[2])
-    #                         #
-    #                         # writelog("   publicationyear = " + str(publicationyear))
-    #                         # writelog("   publicationmonth = " + str(publicationmonth))
-    #                         # writelog("   publicationday = " + str(publicationday))
-    #                         #
-    #                         # yearssincepublication = float(relativedelta(datetime.now(), datetime(publicationyear,publicationmonth,publicationday,0,0,0,0)).years + (relativedelta(datetime.now(), datetime(publicationyear,publicationmonth,publicationday,0,0,0,0)).months/12))
-    #                         # writelog("   yearssincepublication = " + str(yearssincepublication))
-
-
-
-    #                         # if config['showdatasetdetails']:
-    #                         #     writelog()
-    #                         #     for k,v in metadata['data'].items():
-    #                         #         writelog(k, str(v))
-
-
-
-    #                         for k, v in metadata['data'].items():
-
-    #                             # writelog("      " + k + "\n          " + str(v))
-
-    #                             if k == "title":
-    #                                 writelog("   " + k + ": " + str(v))
-    #                             if k == "grantNumber":
-    #                                 writelog("   " + k + ": " + str(v))
-    #                                 fundinginfo = str(v)
-    #                             if k == "publication":
-    #                                 writelog("   " + k + ": " + str(v))
-    #                             if k == "dateOfDeposit":
-    #                                 writelog("   " + k + ": " + str(v))
-    #                             if k == "schema:license":
-    #                                 writelog("   " + k + ": " + str(v))
-    #                                 datalicense = str(v)
-    #                             if k == "dvcore:fileTermsOfAccess":
-    #                                 if v['dvcore:fileRequestAccess'] == False:
-    #                                     writelog("   Access Level: Open Access")
-    #                                 else:
-    #                                     writelog("   Access Level: Restricted Access (request must be submitted to access files)")
-    #                                 writelog("  " + k + ": " +  str(v))
-
-    #                             if k == "author":
-    #                                 writelog("   Author: " + str(v))
-    #                             if k == "citation:datasetContact":
-    #                                 writelog("   Dataset Contact: " + str(v))
-    #                             if k == "citation:dsDescription":
-    #                                 writelog("   Description Length: " + str(len(v)))
-
-
-
-
-    #                         if len(citations['data']) >= int(config["mitigatingfactormincitationcount"]):
-    #                             mitigatingfactorpresent = True
-    #                             exemptionnotes += "High citation count; "
-
-    #                         if int(uniquedownloads) >= int(config["mitigatingfactormindownloadcount"]):
-    #                             mitigatingfactorpresent = True
-    #                             exemptionnotes += "High unique download count; "
-
-    #                         if len(fundinginfo) > 0:
-    #                             mitigatingfactorpresent = True
-    #                             exemptionnotes += "Funded research; "
-
-
-    #                         datasetdetailsrow = [doi, title, author, authorcontactemail, latestversionstate, datedeposited, datepublished, datedistributed, yearssincedeposit, yearssincepublication, yearssincedistribution, datasetsizevaluegb, uniquedownloads, str(len(citations['data'])), fundinginfo, exemptionnotes]
-
-
-    #                         writelog("   preparing to determine if dataset needs to be reviewed...")
-    #                         writelog("       years since publication = " + str(yearssincepublication))
-    #                         writelog("       config['publisheddatasetreviewthresholdinyears'] = " + str(config['publisheddatasetreviewthresholdinyears']))
-    #                         writelog("       datasetsizevaluegb = " + str(datasetsizevaluegb))
-    #                         writelog("       config['publisheddatasetreviewthresholdingb'] = " + str(config['publisheddatasetreviewthresholdingb']))
-
-    #                         try:
-    #                             if float(yearssincepublication) > float(config['publisheddatasetreviewthresholdinyears']) and float(datasetsizevaluegb) > float(config['publisheddatasetreviewthresholdingb']):
-    #                                 publishedneedsreview = True
-
-    #                                 if mitigatingfactorpresent:
-    #                                     writerowtocsv(publishedmitigatingfactorcsvpath, datasetdetailsrow, "a")
-    #                                     writelog("      THIS DATASET HAS A MITIGATING FACTOR AND DOES NOT NEED TO BE REVIEWED")
-    #                                     mitigatingfactordatasetcount += 1
-
-    #                                 else:
-    #                                     writerowtocsv(publishedneedsreviewcsvpath, datasetdetailsrow, "a")
-    #                                     writelog("      THIS DATASET NEEDS TO BE REVIEWED")
-    #                                     needsreviewcount += 1
-
-    #                             else:
-    #                                 publishednoreviewneeded = True
-    #                                 writerowtocsv(publishednoreviewneededcsvpath, datasetdetailsrow, "a")
-    #                                 writelog("      this dataset does not need to be reviewed")
-    #                                 passcount += 1
-
-    #                         except Exception as e:
-    #                             writelog("        " + str(e))
-    #                             writelog("        " + "STATUS UNKNOWN DUE TO ERROR")
-
-
-    #                 except Exception as e:
-    #                     writelog(str(e))
-    #                     writelog("   Dataset is in the "+ str(config['institutionaldataverse']).upper() +" dataverse but privileges are insufficient for retrieving dataset size")
-    #                     writerowtocsv(couldnotbeevaluatedcsvpath, datasetdetailsrow, "a")
-    #                     insufficientprivilegestoprocesscount += 1
-
-
-
-
-    #         # author
-    #         # {'citation:authorName': 'Dainer-Best, Justin', 'citation:authorAffiliation': 'University of Texas at Austin', 'authorIdentifierScheme': 'ORCID', 'authorIdentifier': '0000-0002-1868-0337'}
-    #         # citation:dsDescription
-    #         # citation:datasetContact
-    #         # http://creativecommons.org/publicdomain/zero/1.0
-    #         # dvcore:fileTermsOfAccess
-    #         # {'dvcore:fileRequestAccess': False}
-
-
-    #               # publication
-    #               #     {'publicationCitation': 'Nazmus Sakib & Amit Bhasin (2019) Measuring polarity-based distributions (SARA) of bitumen using simplified chromatographic techniques, International Journal of Pavement Engineering, 20:12, 1371-1384, DOI: 10.1080/10298436.2018.1428972', 'publicationIDType': 'doi', 'publicationIDNumber': '10.1080/10298436.2018.1428972', 'publicationURL': 'https://doi.org/10.1080/10298436.2018.1428972'}
-
-
-    #               # grantNumber
-    #               #     {'citation:grantNumberAgency': 'NASA', 'citation:grantNumberValue': 'NNX17AG70G'}
-
-    #         # 130211
-    #         # https://dataverse.tdl.org/dataset.xhtml?persistentId=doi:10.18738/T8/PRAGLR
-
-    #         # PUBLICATION INFO
-    #         # {"typeName":"publication","multiple":true,"typeClass":"compound","value":[{"publicationCitation":{"typeName":"publicationCitation","multiple":false,"typeClass":"primitive","value":"Harris KM, Hubbard DD, Kuwajima M, Abraham WC, Bourne JN, Bowden JB, Haessly A, Mendenhall JM, Parker PH, Shi B, Spacek J. (2022) Dendritic spine density scales with microtubule number in rat hippocampal dendrites. Neuroscience. https://doi.org/10.1016/j.neuroscience.2022.02.021"},"publicationURL":{"typeName":"publicationURL","multiple":false,"typeClass":"primitive","value":"https://doi.org/10.1016/j.neuroscience.2022.02.021"}}]},
-
-    #         # GRANT INFO
-    #         # {"typeName":"grantNumber","multiple":true,"typeClass":"compound","value":[{"grantNumberAgency":{"typeName":"grantNumberAgency","multiple":false,"typeClass":"primitive","value":"National Institutes of Health"},"grantNumberValue":{"typeName":"grantNumberValue","multiple":false,"typeClass":"primitive","value":"MH095980"}},{"grantNumberAgency":{"typeName":"grantNumberAgency","multiple":false,"typeClass":"primitive","value":"National Institutes of Health"},"grantNumberValue":
-    #                 # writelog("   Associated Publication: " + "")
-    #                 # writelog("   Associated Grant: " + "")
-    #                 # writelog("   Funder Requirements: " + "")
-    #                 # writelog("   Data Access Restrictions: " + "")
-    #                 # writelog("   Metadata Quality Score: " + "")
-
-
-
-
-    #         except Exception as e:
-    #             writelog(str(e))
-
-    # with open("outputs/" + todayDate + "/all_results_summary.txt", "a") as resultssummaryfile:
-    #     resultssummaryfile.write("   PUBLISHED DATASETS\n")
-    #     resultssummaryfile.write("        number evaluated: " + str(processedpublisheddatasets) + "\n")
-    #     resultssummaryfile.write("        stage 1 pass count: " + str(passcount) + "\n")
-    #     resultssummaryfile.write("        stage 2 mitigating factor dataset count: " + str(mitigatingfactordatasetcount) + "\n")
-    #     resultssummaryfile.write("        stage 3 needs review count: " + str(needsreviewcount) + "\n")
-    #     resultssummaryfile.write("        insufficient privileges to process: " + str(insufficientprivilegestoprocesscount) + "\n")
-
-
-
 #identifying published datasets that you do not have admin privileges to process
 if config['crossvalidate'] and sys.platform == "win32":
     if config['email'] == "Outlook":
@@ -1479,7 +986,7 @@ with open("outputs/" + todayDate + "/all_results_summary.txt", "a") as resultssu
     else:
         sstr = str(s)
 
-    if crossvalidate:
+    if config['crossvalidate']:
         resultssummaryfile.write("\n")
         resultssummaryfile.write(singletab("USER ADMIN PRIVILEGES") + "\n")
         unpublishedcounts = draftscombined['admin_privileges'].value_counts()

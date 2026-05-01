@@ -1,0 +1,14 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Gee"
+  given-names: "Bryan"
+  orcid: " 0000-0003-4517-3290"
+- family-names: "Shensky"
+  given-names: "Michael"
+  orcid: "0000-0002-5817-6135"
+title: "dv-data-retention-reviewer"
+version: v1.1-beta
+doi: 10.5281/zenodo.19933486
+date-released: 2026-04-30
+url: "https://github.com/TexasDigitalLibrary/dv-data-retention-reviewer"

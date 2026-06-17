@@ -22,7 +22,46 @@ if sys.platform == "linux":
 if sys.platform == "win32":
     import win32com.client
 
-print("all packages imported successfully")
+
+#set start time and define log file path
+ot = time.time()
+timeprintlist = [time.time()]
+logfilepath = "logs/" + datetime.now().strftime("%Y-%m-%d--%Hh-%Mm-%Ss") + ".txt"
+
+#define write log function
+def writelog(message):
+
+    global logfilepath
+    if not logfilepath:
+        logfilepath=str("logs/" + datetime.now().strftime("%Y_%m_%d__%H_%M_%S") + "__log.txt")
+    try:
+        os.mkdir(logfilepath.split("/")[0])
+    except Exception as e:
+        pass
+    processedtimes = []
+    ct = time.time()
+    totaltime = ct-ot
+    stagetime = ct-timeprintlist[-1]
+    timeprintlist.append(ct)
+    timestoprocess = [stagetime, totaltime]
+    for flt in timestoprocess:
+        m, s = str(int(math.floor(flt/60))), int(round(flt%60))
+        if s < 10:
+            sstr = "0" + str(s)
+        else:
+            sstr = str(s)
+        processedtimes.append(m+":"+sstr)
+    timeprint = " " + datetime.now().strftime("%H:%M:%S") + "   " + processedtimes[1]  + "   +" + processedtimes[0] + "   "
+    print(timeprint + str(message))
+    try:
+        if isinstance(logfilepath, str):
+            with open(logfilepath, "a") as log:
+                log.write(timeprint + str(message) + "\n")
+    except Exception as e:
+        print(f"ERROR: could not successfully write to log file ({e})")
+
+
+writelog("all packages imported successfully")
 
 
 # Open and read config parameters from .env file
@@ -51,13 +90,13 @@ def loadlatestdataversereport(tdrdataversereports, pattern):
             break
 
     if not latest_file:
-        print(f"No file with '{pattern}' was found in '{tdrdataversereports}'.")
+        writelog(f"No file with '{pattern}' was found in '{tdrdataversereports}'.")
         return None
 
     else:
         file_path = os.path.join(tdrdataversereports, latest_file)
         df = pd.read_excel(file_path, sheet_name='datasets', engine='openpyxl')
-        print(f"The most recent file '{latest_file}' has been loaded successfully.")
+        writelog(f"The most recent file '{latest_file}' has been loaded successfully.")
         return df
 
 #function to search for the most recent output subfolder and then a specified CSV file within it
@@ -82,10 +121,10 @@ def loadlatestoutputfile(directory, pattern):
             if pattern in file:
                 file_path = os.path.join(folder_path, file)
                 df = pd.read_csv(file_path)
-                print(f"The most recent file '{file}' from folder '{recent_folder}' has been loaded successfully.")
+                writelog(f"The most recent file '{file}' from folder '{recent_folder}' has been loaded successfully.")
                 return df, folder_path
 
-    print(f"No file with '{pattern}' was found in any subfolder of '{directory}'.")
+    writelog(f"No file with '{pattern}' was found in any subfolder of '{directory}'.")
     return None
 
 #function to indent text
@@ -101,7 +140,7 @@ def doubletab(text):
 #define whether to run in test mode
 if config['test']:
     subset = 10
-    print(f"only testing with the first {subset} records")
+    writelog(f"only testing with the first {subset} records")
 
 
 #if tdr-dataverse-reports directory does not yet exist, create it
@@ -113,9 +152,9 @@ if not os.path.isdir("outputs"):
     os.mkdir("outputs")
 
 #if outputs directory does not yet exist, create it
-if not os.path.isdir("./outputs/" + todayDate):
-    os.mkdir("outputs/" + todayDate)
-    print("outputs/" + todayDate + " has been created successfully")
+if not os.path.isdir(f"./outputs/{todayDate}"):
+    os.mkdir(f"outputs/{todayDate}")
+    writelog(f"outputs/{todayDate} has been created successfully")
 
 
 
@@ -123,7 +162,7 @@ if not os.path.isdir("./outputs/" + todayDate):
 
 #create summary file
 with open("outputs/" + todayDate + "/all_results_summary.txt", "w") as resultssummaryfile:
-    resultssummaryfile.write("Results summary " + todayDate + "\n\n")
+    resultssummaryfile.write(f"Results summary {todayDate}\n\n")
     resultssummaryfile.write(singletab("REVIEW CRITERIA") + "\n")
     resultssummaryfile.write(doubletab("UNPUBLISHED DATA years since created = ") + str(config['unpublisheddatasetreviewthresholdinyears']) +"  \n")
     resultssummaryfile.write(doubletab("UNPUBLISHED DATA dataset size threshold = ")+ str(config['unpublisheddatasetreviewthresholdingb']) +"  \n")
@@ -173,46 +212,11 @@ if config["processdeaccessioneddatasets"]:
 writerowtocsv(couldnotbeevaluatedcsvpath,publishedheaderrow,"w")
 
 
-#set start time and define log file path
-ot = time.time()
-timeprintlist = [time.time()]
-logfilepath = "logs/" + datetime.now().strftime("%Y-%m-%d--%Hh-%Mm-%Ss") + ".txt"
 
-#define write log function
-def writelog(message):
-
-    global logfilepath
-    if not logfilepath:
-        logfilepath=str("logs/" + datetime.now().strftime("%Y_%m_%d__%H_%M_%S") + "__log.txt")
-    try:
-        os.mkdir(logfilepath.split("/")[0])
-    except Exception as e:
-        pass
-    processedtimes = []
-    ct = time.time()
-    totaltime = ct-ot
-    stagetime = ct-timeprintlist[-1]
-    timeprintlist.append(ct)
-    timestoprocess = [stagetime, totaltime]
-    for flt in timestoprocess:
-        m, s = str(int(math.floor(flt/60))), int(round(flt%60))
-        if s < 10:
-            sstr = "0" + str(s)
-        else:
-            sstr = str(s)
-        processedtimes.append(m+":"+sstr)
-    timeprint = " " + datetime.now().strftime("%H:%M:%S") + "   " + processedtimes[1]  + "   +" + processedtimes[0] + "   "
-    print(timeprint + str(message))
-    try:
-        if isinstance(logfilepath, str):
-            with open(logfilepath, "a") as log:
-                log.write(timeprint + str(message) + "\n")
-    except Exception as e:
-        print("ERROR: could not successfully write to log file (" + str(e) + ")")
 
 writelog("Starting TDR Data Retention review process at " + datetime.now().strftime("%Y-%m-%d__%H:%M:%S"))
 
-writelog("All packages imported and all major script parameters defined successfully\n")
+writelog("all major script parameters defined successfully\n")
 
 
 
@@ -220,7 +224,7 @@ writelog("All packages imported and all major script parameters defined successf
 
 #RETRIEVE INFORMATION ABOUT DEACCESSIONED DATASETS
 if config["processdeaccessioneddatasets"]:
-    writelog("\n\nSTARTING TO PROCESS DEACCESSIONED DATASETS\n\n")
+    writelog("STARTING TO PROCESS DEACCESSIONED DATASETS")
     ROLE_IDS = str(1) #admin role
     DVOBJECT_TYPES="Dataset"
     PUBLISHED_STATES="Deaccessioned"
@@ -241,12 +245,16 @@ if config["processdeaccessioneddatasets"]:
 
         try:
             deaccessioneddata = json.loads(deaccessioneddatasetlist.text)['data']
-        except:
-            input("Error returning results - check to make sure that API key is valid in .env. Press any key to continue.")
+
+        except Exception as e:
+            writelog(str(e) + "\n")
+            writelog(deaccessioneddatasetlist.text + "\n")
+            writelog("Error returning results - check to make sure that API key is valid in .env." + "\n")
+            input("To ignore error and proceed, press any key to continue..." + "\n")
 
         writelog("NUMBER OF DEACCESSIONED RESULTS: " + str(deaccessioneddata['total_count']))
 
-        print(f"\nRetrieving {len(deaccessioneddata['items'])} {PUBLISHED_STATES} datasets...\n")
+        writelog(f"Retrieving {len(deaccessioneddata['items'])} {PUBLISHED_STATES} datasets...\n")
 
         if currentpageofresults == 1:
             writelog("NUMBER OF DEACCESSIONED RESULTS: " + str(deaccessioneddata['total_count']))
@@ -594,7 +602,7 @@ if config["processpublisheddatasets"]:
 if config["processunpublisheddatasets"]:
 
 
-    writelog("STARTING TO PROCESS UNPUBLISHED DATASETS \n\n")
+    writelog("STARTING TO PROCESS UNPUBLISHED DATASETS \n")
 
     ROLE_IDS = str(1)  # admin role
     DVOBJECT_TYPES = "dataset"

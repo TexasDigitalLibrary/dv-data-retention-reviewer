@@ -59,7 +59,7 @@ wheels = [
 
 [[package]]
 name = "dv-data-retention-reviewer"
-version = "0.1.0"
+version = "1.1b0"
 source = { virtual = "." }
 dependencies = [
     { name = "pandas" },

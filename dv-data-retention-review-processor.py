@@ -482,7 +482,12 @@ if config["processpublisheddatasets"]:
 
                 writelog("yearssincepublished = " + str(yearssincepublished))
 
-                latestversionstate = current_version.get('latestVersionPublishingState')
+                try:
+                    latestversionstate = current_version.get('latestVersionPublishingState')
+                except Exception as e:
+                    writelog("ERROR: latestVersionPublishingState information could not be retrieved")
+                    writelog("ERROR: " + str(e))
+
 
                 #metrics
                 try:
@@ -731,62 +736,64 @@ if config["processunpublisheddatasets"]:
         # datasetsizevaluegb = float(int(datasizemessage.split("dataset:")[1].split(" bytes")[0].strip().replace(",","")) / 1000000000)
         # writelog("size = " + str(round(datasetsizevaluegb,3) + " GB"))
 
-        datasetinfo = requests.get("https://dataverse.tdl.org/api/datasets/:persistentId/versions/:draft?persistentId=" + doi, headers={"X-Dataverse-key":config['dataverse_api_key']})
-        writelog(json.loads(datasetinfo.text)['data'])
-        for k,v in json.loads(datasetinfo.text)['data'].items():
-            if type(v) is dict:
-                writelog("  " + k)
-                for k2,v2 in v.items():
-                    if type(v2) is dict:
-                        writelog("     " + k2)
-                        for k3,v3 in v2.items():
-                            writelog("        " + k3 + ": " + str(v3))
-                    else:
-                        writelog("     " + k2 + ": " + str(v2))
+        try:
+            datasetinfo = requests.get("https://dataverse.tdl.org/api/datasets/:persistentId/versions/:draft?persistentId=" + doi, headers={"X-Dataverse-key":config['dataverse_api_key']})
+            writelog(json.loads(datasetinfo.text)['data'])
+            for k,v in json.loads(datasetinfo.text)['data'].items():
+                if type(v) is dict:
+                    writelog("  " + k)
+                    for k2,v2 in v.items():
+                        if type(v2) is dict:
+                            writelog("     " + k2)
+                            for k3,v3 in v2.items():
+                                writelog("        " + k3 + ": " + str(v3))
+                        else:
+                            writelog("     " + k2 + ": " + str(v2))
+                else:
+                    writelog("  " + k + ": " + str(v))
+
+            response_data = json.loads(datasetinfo.text)['data']
+            files = response_data.get('files', [])
+            total_filesize_bytes = sum(
+                    file.get('dataFile', {}).get('filesize', 0) for file in files
+                )
+            datasetsizevaluegb = round(total_filesize_bytes / (1024 ** 3), 2)
+            writelog(f"     Total File Size (GB): {datasetsizevaluegb}")
+
+            citation = response_data.get('metadataBlocks', {}).get('citation', {})
+            fields = citation.get('fields', [])
+            funderinfo = []
+            for field in fields:
+                if field['typeName'] == 'grantNumber':
+                    for grant in field.get('value', []):
+                        grant_number_agency = grant.get('grantNumberAgency', {}).get('value', '')
+                        funderinfo.append(grant_number_agency)
+
+            fundinginfo = "; ".join(funderinfo)
+            contactinfo = []
+            for field in fields:
+                if field['typeName'] == 'datasetContact':
+                    for contact in field.get('value', []):
+                        contact_email = contact.get('datasetContactEmail', {}).get('value', '')
+                        contactinfo.append(contact_email)
+            authorcontactemail = "; ".join(contactinfo)
+
+            latestversionstate=response_data.get('latestVersionPublishingState')
+
+            datasetdetailsrow = [doi, title, author, authorcontactemail, latestversionstate, datecreated, datelastupdated, yearssincecreation, yearssincelastupdated, datasetsizevaluegb, fundinginfo, exemptionnotes]
+
+            #unpublished dataset does not need review
+            if yearssincecreation < float(config['unpublisheddatasetreviewthresholdinyears']) and datasetsizevaluegb < float(config['unpublisheddatasetreviewthresholdingb']):
+                writerowtocsv(unpublishednoreviewneededcsvpath, datasetdetailsrow, "a")
+                passcount += 1
+
+
+            #unpublished dataset does need to be reviewed
             else:
-                writelog("  " + k + ": " + str(v))
-
-        response_data = json.loads(datasetinfo.text)['data']
-        files = response_data.get('files', [])
-        total_filesize_bytes = sum(
-                file.get('dataFile', {}).get('filesize', 0) for file in files
-            )
-        datasetsizevaluegb = round(total_filesize_bytes / (1024 ** 3), 2)
-        writelog(f"     Total File Size (GB): {datasetsizevaluegb}")
-
-        citation = response_data.get('metadataBlocks', {}).get('citation', {})
-        fields = citation.get('fields', [])
-        funderinfo = []
-        for field in fields:
-            if field['typeName'] == 'grantNumber':
-                for grant in field.get('value', []):
-                    grant_number_agency = grant.get('grantNumberAgency', {}).get('value', '')
-                    funderinfo.append(grant_number_agency)
-
-        fundinginfo = "; ".join(funderinfo)
-        contactinfo = []
-        for field in fields:
-            if field['typeName'] == 'datasetContact':
-                for contact in field.get('value', []):
-                    contact_email = contact.get('datasetContactEmail', {}).get('value', '')
-                    contactinfo.append(contact_email)
-        authorcontactemail = "; ".join(contactinfo)
-
-        latestversionstate=response_data.get('latestVersionPublishingState')
-
-        datasetdetailsrow = [doi, title, author, authorcontactemail, latestversionstate, datecreated, datelastupdated, yearssincecreation, yearssincelastupdated, datasetsizevaluegb, fundinginfo, exemptionnotes]
-
-        #unpublished dataset does not need review
-        if yearssincecreation < float(config['unpublisheddatasetreviewthresholdinyears']) and datasetsizevaluegb < float(config['unpublisheddatasetreviewthresholdingb']):
-            writerowtocsv(unpublishednoreviewneededcsvpath, datasetdetailsrow, "a")
-            passcount += 1
-
-
-        #unpublished dataset does need to be reviewed
-        else:
-            writerowtocsv(unpublishedneedsreviewcsvpath, datasetdetailsrow, "a")
-            needsreviewcount += 1
-
+                writerowtocsv(unpublishedneedsreviewcsvpath, datasetdetailsrow, "a")
+                needsreviewcount += 1
+        except Exception as e:
+            writelog("ERROR: " + str(e))
         writelog("\n\n")
 
 
@@ -999,10 +1006,10 @@ with open("outputs/" + todayDate + "/all_results_summary.txt", "a") as resultssu
         resultssummaryfile.write(singletab("USER ADMIN PRIVILEGES") + "\n")
         unpublishedcounts = draftscombined['admin_privileges'].value_counts()
         resultssummaryfile.write('Admin privileges for unpublished datasets:\n')
-        resultssummaryfile.write(doubletab(unpublishedcounts.to_string())) + "\n\n"
+        resultssummaryfile.write(doubletab(unpublishedcounts.to_string()) + "\n\n"
         publishedcounts = publishedcombined['admin_privileges'].value_counts()
         resultssummaryfile.write('Admin privileges for published datasets:\n')
-        resultssummaryfile.write(doubletab(publishedcounts.to_string())) + "\n\n"
+        resultssummaryfile.write(doubletab(publishedcounts.to_string()) + "\n\n"
 
     resultssummaryfile.write("\n")
     resultssummaryfile.write(singletab("RUN TIME") + "\n")

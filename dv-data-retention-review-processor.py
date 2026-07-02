@@ -549,7 +549,7 @@ if config["processpublisheddatasets"]:
                 datasetdetailsrow = [doi, title, author, authorcontactemail, latestversionstate, datecreated, datelastupdated, datepublished, yearssincecreation, yearssincelastupdated, yearssincepublished, version, datasetsizevaluegb, uniquedownloads, totalcitations, fundinginfo, exemptionnotes]
 
                 #published dataset is in compliance with dataset retention criteria because it is smaller than size threshold and below years since creation threshold (level 1)
-                if yearssincecreation < float(config['publisheddatasetreviewthresholdinyears']) and datasetsizevaluegb < float(config['publisheddatasetreviewthresholdingb']):
+                if yearssincelastupdated < float(config['publisheddatasetreviewthresholdinyears']) and datasetsizevaluegb < float(config['publisheddatasetreviewthresholdingb']):
                     writerowtocsv(publishednoreviewneededcsvpath, datasetdetailsrow, "a")
                     passcount += 1
 

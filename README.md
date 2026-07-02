@@ -13,6 +13,92 @@ To install the required dependencies using uv, navigate to the local repo direct
 
 The recommended approach for using this Python script is to utilize a code editor like VSCode for modifying the .env config file and running the script through your installed Python3 interpretor using the VSCode Python extension. Instructions for running a Python script in VSCode can be found at https://code.visualstudio.com/docs/python/run. In order to run the code successfully you should have admin privileges to all of the repositories in the dataverse that you want to run the script against and you will need a valid dataverse API key associated with your account in the Data instance. Instructions for obtaining and using a dataverse API key can be found at https://guides.dataverse.org/en/latest/api/getting-started.html.
 
+
+### Alternative setup: virtual environment + requirements.txt
+The repository already includes a `uv.lock` file, so if you have uv installed you can get everything set up with a single command — just run `uv sync` as described above. However, if you are new to Python or prefer not to install uv, the approach below using a virtual environment and `pip install -r requirements.txt` is more universal and easier to understand for beginners. All you need is a standard Python installation — no extra tools required. Here are the steps:
+
+#### Why this is useful
+* Keeps this project's dependencies isolated from other Python projects on your machine.
+* Makes setup reproducible for teammates and future environments.
+* Reduces version conflicts caused by globally installed packages.
+
+#### Step 1: Create a virtual environment
+From the repository root:
+
+```powershell
+python -m venv .venv
+```
+
+#### Step 2: Activate the virtual environment
+Windows PowerShell:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+Windows Command Prompt (cmd):
+
+```bat
+.venv\Scripts\activate.bat
+```
+
+macOS/Linux:
+
+```bash
+source .venv/bin/activate
+```
+
+#### Step 3: Install dependencies from requirements.txt
+
+```powershell
+pip install -r requirements.txt
+```
+
+#### Step 4: Run the script
+
+```powershell
+python dv-data-retention-review-processor.py
+```
+
+#### Optional: Deactivate when done
+
+```powershell
+deactivate
+```
+
+### Dependency management: uv vs requirements.txt
+
+This project supports two approaches for managing Python dependencies. The table below summarizes the trade-offs to help you choose the right one for your situation.
+
+| Feature | `requirements.txt` + `pip` | `uv` + `pyproject.toml` + `uv.lock` |
+|---|---|---|
+| Dependency declaration | Manual flat list | Structured metadata in `pyproject.toml` |
+| Transitive dependencies | Not tracked — only what you list | Fully resolved and locked automatically |
+| Reproducibility | Partial — only if you use `pip freeze` | Guaranteed — exact versions and hashes locked |
+| Install speed | Standard | Significantly faster (uv is written in Rust) |
+| Dev vs prod dependencies | Requires separate files (e.g. `requirements-dev.txt`) | Built-in via `[dependency-groups]` in `pyproject.toml` |
+| Python version pinning | Not supported | Supported via `requires-python` in `pyproject.toml` |
+| Cross-platform consistency | Fragile — platform-specific packages can cause issues | Handles platform markers automatically (e.g. `pywin32` Windows only) |
+| Tooling required | Only pip (built into Python) | Requires uv installation |
+| Familiarity | Universally understood | Newer tool, growing adoption |
+
+#### When to use `requirements.txt`
+- Quick setup on a new machine without installing extra tools
+- Sharing with collaborators who are unfamiliar with uv
+- Environments where only pip is available (e.g. some CI/CD systems)
+
+#### When to use `uv`
+- You want guaranteed reproducibility across machines and over time
+- You are working on a shared or long-lived project
+- You want faster installs and automatic lock file management
+- You want clean separation of runtime vs development dependencies
+
+#### Recommended workflow for this project
+The **primary recommended approach** is `uv sync`, which installs from `uv.lock` and ensures an exact match to the tested environment. The `requirements.txt` file is provided as a **fallback** for users who cannot or prefer not to use uv.
+
+The recommended approach for using this Python script is to utilize a code editor like VSCode for modifying the .env config file and running the script through your installed Python3 interpretor using the VSCode Python extension. Instructions for running a Python script in VSCode can be found at https://code.visualstudio.com/docs/python/run. In order to run the code successfully you should have admin privileges to all of the repositories in the dataverse that you want to run the script against and you will need a valid dataverse API key associated with your account in the Data instance. Instructions for obtaining and using a dataverse API key can be found at https://guides.dataverse.org/en/latest/api/getting-started.html.
+
+
 #### License: [3-Clause BSD](LICENSE.txt)
 
 

@@ -41,9 +41,9 @@ def writelog(message):
     processedtimes = []
     ct = time.time()
     totaltime = ct-ot
-    stagetime = ct-timeprintlist[-1]
+    leveltime = ct-timeprintlist[-1]
     timeprintlist.append(ct)
-    timestoprocess = [stagetime, totaltime]
+    timestoprocess = [leveltime, totaltime]
     for flt in timestoprocess:
         m, s = str(int(math.floor(flt/60))), int(round(flt%60))
         if s < 10:
@@ -181,11 +181,11 @@ totaldatasetsindataverseovertenyearsoldandoverfivegb = 0
 
 
 #define file paths for all output CSV files
-publishedneedsreviewcsvpath = "outputs/" + todayDate + "/stage3-needsreview-published-list-" + todayDate + "-" + str(config['institutionaldataverse']) + ".csv"
-unpublishedneedsreviewcsvpath = "outputs/" + todayDate + "/stage3-needsreview-unpublished-list-" + todayDate + "-" + str(config['institutionaldataverse']) + ".csv"
-publishedmitigatingfactorcsvpath = "outputs/" + todayDate + "/stage2-mitigatingfactor-published-list-" + todayDate + "-" + str(config['institutionaldataverse']) + ".csv"
-publishednoreviewneededcsvpath = "outputs/" + todayDate + "/stage1-passed-published-list-" + todayDate + "-" + str(config['institutionaldataverse']) + ".csv"
-unpublishednoreviewneededcsvpath = "outputs/" + todayDate + "/stage1-passed-unpublished-list-" + todayDate + "-" + str(config['institutionaldataverse']) + ".csv"
+publishedneedsreviewcsvpath = "outputs/" + todayDate + "/level3-needsreview-published-list-" + todayDate + "-" + str(config['institutionaldataverse']) + ".csv"
+unpublishedneedsreviewcsvpath = "outputs/" + todayDate + "/level3-needsreview-unpublished-list-" + todayDate + "-" + str(config['institutionaldataverse']) + ".csv"
+publishedmitigatingfactorcsvpath = "outputs/" + todayDate + "/level2-mitigatingfactor-published-list-" + todayDate + "-" + str(config['institutionaldataverse']) + ".csv"
+publishednoreviewneededcsvpath = "outputs/" + todayDate + "/level1-passed-published-list-" + todayDate + "-" + str(config['institutionaldataverse']) + ".csv"
+unpublishednoreviewneededcsvpath = "outputs/" + todayDate + "/level1-passed-unpublished-list-" + todayDate + "-" + str(config['institutionaldataverse']) + ".csv"
 couldnotbeevaluatedcsvpath = "outputs/" + todayDate + "/could-not-be-evaluated-" + todayDate + "-" + str(config['institutionaldataverse']) + ".csv"
 deaccessionedcsvpath = "outputs/" + todayDate + "/deaccessioned-" + todayDate + "-" + str(config['institutionaldataverse']) + ".csv"
 
@@ -299,7 +299,7 @@ if config["processdeaccessioneddatasets"]:
 
     with open("outputs/" + todayDate + "/all_results_summary.txt", "a") as resultssummaryfile:
         resultssummaryfile.write(singletab("DEACCESSIONED DATASETS") + "\n")
-        resultssummaryfile.write(doubletab("number evaluated: ") + str(deaccessioneddatasetcounter) + "\n\n")
+        resultssummaryfile.write(doubletab("number of DEACCESSIONED datasets evaluated: ") + str(deaccessioneddatasetcounter) + "\n\n")
 
 
     writelog("\nFINISHED PROCESSING DEACCESSIONED DATASETS\n\n")
@@ -315,7 +315,7 @@ if config["processdeaccessioneddatasets"]:
 #TRY NEW METHOD TO RETRIEVE INFO ABOUT ALL PUBLISHED DATASETS
 
 if config["processpublisheddatasets"]:
-    writelog("STARTING NEW METHOD TO PROCESS PUBLISHED DATASETS \n\n")
+    writelog("STARTING TO PROCESS PUBLISHED DATASETS \n\n")
     publisheddatasetcounter = 0
     passcount = 0
     needsreviewcount = 0
@@ -356,6 +356,7 @@ if config["processpublisheddatasets"]:
             if currentpageofresults >= total_count:
                 writelog(f"NUMBER OF PUBLISHED RESULTS ACCESSIBLE UNDER USER ROLE STATUS: {total_count}")
                 break
+
         except Exception as e:
             writelog(str(e))
 
@@ -484,34 +485,61 @@ if config["processpublisheddatasets"]:
 
                 try:
                     latestversionstate = current_version.get('latestVersionPublishingState')
+                    writelog("latestversionstate = " + str(latestversionstate))
                 except Exception as e:
                     writelog("ERROR: latestVersionPublishingState information could not be retrieved")
                     writelog("ERROR: " + str(e))
 
 
-                #metrics
-                try:
-                    citationsrequest = requests.get("https://dataverse.tdl.org/api/datasets/:persistentId/makeDataCount/citations?persistentId=" + doi)
-                    citations = json.loads(citationsrequest.content.decode("latin-1"))
-                    if isinstance(citations.get("data"), dict) and "citations" in citations["data"]:
-                        totalcitations = str(citations["data"]["citations"])
-                    else:
-                        totalcitations = "0"
-                except Exception as e:
-                    totalcitations = "0"
-                    writelog("ERROR: " + str(e))
+
+                writelog("starting to check for mitigating factors...")
+                mitigatingfactorpresent = False
 
                 try:
-                    downloadsrequest = requests.get("https://dataverse.tdl.org/api/datasets/:persistentId/makeDataCount/downloadsUnique?persistentId=" + doi)
-                    downloads = json.loads(downloadsrequest.content.decode("latin-1"))
-                    if isinstance(downloads.get("data"), dict) and "downloadsUnique" in downloads["data"]:
-                        uniquedownloads = str(downloads["data"]["downloadsUnique"])
-                    else:
+                    writelog("starting to retrieve citation count data...")
+                    citationsrequest = requests.get("https://dataverse.tdl.org/api/datasets/:persistentId/makeDataCount/citations?persistentId=" + doi)
+                    writelog(citationsrequest.content.decode("latin-1"))
+
+                    citationsresponse = json.loads(citationsrequest.content.decode("latin-1"))
+
+                    try:
+                        citations = str(citationsresponse["data"]["citations"])
+
+                    except Exception as e:
+                        writelog("ERROR: citations information could not be be derived from JSON response, value set to 0 by default")
+                        citations = "0"
+
+                    if int(totalcitations) > int(config['mitigatingfactormincitationcount']):
+                        mitigatingfactorpresent = True
+
+                except Exception as e:
+                    totalcitations = "0"
+                    writelog("GENERAL ERROR: citation information could not be retrieved from https://dataverse.tdl.org/api/datasets/:persistentId/makeDataCount/citations?persistentId=" + doi)
+                    writelog("   SPECIFIC ERROR: " + str(e))
+
+
+
+                try:
+                    writelog("starting to retrieve unique download count data...")
+                    uniquedownloadsrequest = requests.get("https://dataverse.tdl.org/api/datasets/:persistentId/makeDataCount/downloadsUnique?persistentId=" + doi)
+
+                    writelog(uniquedownloadsrequest.content.decode("latin-1"))
+                    uniquedownloadsresponse = json.loads(uniquedownloadsrequest.content.decode("latin-1"))
+
+                    try:
+                        uniquedownloads = str(uniquedownloadsresponse["data"]["downloadsUnique"])
+
+                    except Exception as e:
+                        writelog("ERROR: uniquedownloads information could not be be derived from JSON response, value set to 0 by default")
                         uniquedownloads = "0"
+
+                    if int(uniquedownloads) > int(config['mitigatingfactormindownloadcount']):
+                        mitigatingfactorpresent = True
 
                 except Exception as e:
                     uniquedownloads = "0"
-                    writelog("ERROR: " + str(e))
+                    writelog("GENERAL ERROR: uniquedownloads information could not be retrieved from https://dataverse.tdl.org/api/datasets/:persistentId/makeDataCount/downloadsUnique?persistentId=" + doi)
+                    writelog("   SPECIFIC ERROR: " + str(e))
 
             except Exception as e:
                 writelog("ERROR: " + str(e))
@@ -520,16 +548,23 @@ if config["processpublisheddatasets"]:
             try:
                 datasetdetailsrow = [doi, title, author, authorcontactemail, latestversionstate, datecreated, datelastupdated, datepublished, yearssincecreation, yearssincelastupdated, yearssincepublished, version, datasetsizevaluegb, uniquedownloads, totalcitations, fundinginfo, exemptionnotes]
 
-                #published dataset does not need review
+                #published dataset is in compliance with dataset retention criteria because it is smaller than size threshold and below years since creation threshold (level 1)
                 if yearssincecreation < float(config['publisheddatasetreviewthresholdinyears']) and datasetsizevaluegb < float(config['publisheddatasetreviewthresholdingb']):
                     writerowtocsv(publishednoreviewneededcsvpath, datasetdetailsrow, "a")
                     passcount += 1
 
 
-                #published dataset does need to be reviewed
+                #published dataset is NOT in compliance with dataset retention criteria because it is larger than size threshold and over years since creation threshold (level 1)
                 else:
-                    writerowtocsv(publishedneedsreviewcsvpath, datasetdetailsrow, "a")
-                    needsreviewcount += 1
+
+                    #published dataset is out of compliance, but has mitigating factors (level 2)
+                    if mitigatingfactorpresent:
+                        writerowtocsv(publishedmitigatingfactorcsvpath,publishedheaderrow,"a")
+
+                    else:
+                        #published dataset is out of compliance, has no mitigating factors, and needs full review (level 3)
+                        writerowtocsv(publishedneedsreviewcsvpath, datasetdetailsrow, "a")
+                        needsreviewcount += 1
 
             except Exception as e:
                 writelog("ERROR: " + str(e))
@@ -541,9 +576,9 @@ if config["processpublisheddatasets"]:
     with open("outputs/" + todayDate + "/all_results_summary.txt", "a") as resultssummaryfile:
         resultssummaryfile.write(singletab("PUBLISHED DATASETS") + "\n")
         resultssummaryfile.write(doubletab("number evaluated: ") + str(publisheddatasetcounter) + "\n")
-        resultssummaryfile.write(doubletab("stage 1 pass count: ") + str(passcount) + "\n")
-        resultssummaryfile.write(doubletab("stage 1 needs review count: ") + str(needsreviewcount) + "\n\n")
-
+        resultssummaryfile.write(doubletab("count of PUBLISHED datasets in full data retention compliance (level 1): ") + str(passcount) + "\n")
+        resultssummaryfile.write(doubletab("count of PUBLISHED datasets out of compliance but with mitigating factors (level 2): ") + str(needsreviewcount) + "\n\n")
+        resultssummaryfile.write(doubletab("count of PUBLISHED datasets out of compliance and needing review (level 3): ") + str(needsreviewcount) + "\n\n")
 
     writelog("\n\nFINISHED PROCESSING PUBLISHED DATASETS\n\n")
 
@@ -797,11 +832,12 @@ if config["processunpublisheddatasets"]:
         writelog("\n\n")
 
 
+
     with open("outputs/" + todayDate + "/all_results_summary.txt", "a") as resultssummaryfile:
         resultssummaryfile.write(singletab("UNPUBLISHED DATASETS") + "\n")
         resultssummaryfile.write(doubletab("number evaluated: ") + str(unpublisheddatasetcounter) + "\n")
-        resultssummaryfile.write(doubletab("stage 1 pass count: ") + str(passcount) + "\n")
-        resultssummaryfile.write(doubletab("stage 1 needs review count: ") + str(needsreviewcount) + "\n\n")
+        resultssummaryfile.write(doubletab("count of UNPUBLISHED datasets in full data retention compliance (level 1): ") + str(passcount) + "\n")
+        resultssummaryfile.write(doubletab("count of UNPUBLISHED datasets out of compliance and needing review (level 3): ") + str(needsreviewcount) + "\n\n")
 
 
     writelog("\n\nFINISHED PROCESSING UNPUBLISHED DATASETS\n\n")
@@ -864,17 +900,17 @@ if config['crossvalidate'] and sys.platform == "win32":
     draftsall = dataversereport[(dataversereport['versionState'] == "DRAFT") & (dataversereport['viewsUnique'].isnull())] #remove previously published, in draft
 
     #import latest API outputs of DRAFT datasets
-    pattern2 = 'stage1-passed-unpublished'
-    stage1drafts, specificoutputdirectory = loadlatestoutputfile(outputsdirectory, pattern2)
-    stage1drafts['stage'] = 'stage1'
-    pattern3 = 'stage3-needsreview-unpublished'
-    stage3drafts, specificoutputdirectory = loadlatestoutputfile(outputsdirectory, pattern3)
-    stage3drafts['stage'] = 'stage3'
-    draftssome = pd.concat([stage1drafts, stage3drafts], ignore_index=True)
+    pattern2 = 'level1-passed-unpublished'
+    level1drafts, specificoutputdirectory = loadlatestoutputfile(outputsdirectory, pattern2)
+    level1drafts['level'] = 'level1'
+    pattern3 = 'level3-needsreview-unpublished'
+    level3drafts, specificoutputdirectory = loadlatestoutputfile(outputsdirectory, pattern3)
+    level3drafts['level'] = 'level3'
+    draftssome = pd.concat([level1drafts, level3drafts], ignore_index=True)
     print("Data files loaded successfully.")
 
     draftscombined = pd.merge(draftsall, draftssome, on='doi', how='left')
-    draftscombined['admin_privileges'] = np.where(draftscombined['stage'].isnull(), 'No privileges', 'Privileges') #can use any column that is always filled in the outputs file
+    draftscombined['admin_privileges'] = np.where(draftscombined['level'].isnull(), 'No privileges', 'Privileges') #can use any column that is always filled in the outputs file
     draftscombined.to_csv(specificoutputdirectory+f'/{todayDate}-{str(config['institutionaldataverse'])}-drafts-cross-validation.csv')
 
     ##### IN DEVELOPMENT AS OF 2025-08-18, not tested for functionality #######
@@ -882,17 +918,17 @@ if config['crossvalidate'] and sys.platform == "win32":
     #import latest API outputs of DRAFT datasets
     ##get previously published ones in draft status now
     tempdrafts = dataversereport[(dataversereport['versionState'] == "DRAFT") & (dataversereport['viewsUnique'].notnull())]
-    ##API outputs of published datasets assigned to different stages
-    pattern4 = 'stage1-passed-published'
-    stage1published, specificoutputdirectory = loadlatestoutputfile(outputsdirectory, pattern4)
-    stage1published['stage'] = 'stage1'
-    pattern5 = 'stage2-mitigatingfactor-published'
-    stage2published, specificoutputdirectory = loadlatestoutputfile(outputsdirectory, pattern5)
-    stage2published['stage'] = 'stage2'
-    pattern6 = 'stage3-needsreview-published'
-    stage3published, specificoutputdirectory = loadlatestoutputfile(outputsdirectory, pattern6)
-    stage3published['stage'] = 'stage3'
-    publishedall = pd.concat([stage1published, stage2published, stage3published, tempdrafts], ignore_index=True)
+    ##API outputs of published datasets assigned to different levels
+    pattern4 = 'level1-passed-published'
+    level1published, specificoutputdirectory = loadlatestoutputfile(outputsdirectory, pattern4)
+    level1published['level'] = 'level1'
+    pattern5 = 'level2-mitigatingfactor-published'
+    level2published, specificoutputdirectory = loadlatestoutputfile(outputsdirectory, pattern5)
+    level2published['level'] = 'level2'
+    pattern6 = 'level3-needsreview-published'
+    level3published, specificoutputdirectory = loadlatestoutputfile(outputsdirectory, pattern6)
+    level3published['level'] = 'level3'
+    publishedall = pd.concat([level1published, level2published, level3published, tempdrafts], ignore_index=True)
     print("Data files loaded successfully.")
 
     #set filename
@@ -1006,10 +1042,10 @@ with open("outputs/" + todayDate + "/all_results_summary.txt", "a") as resultssu
         resultssummaryfile.write(singletab("USER ADMIN PRIVILEGES") + "\n")
         unpublishedcounts = draftscombined['admin_privileges'].value_counts()
         resultssummaryfile.write('Admin privileges for unpublished datasets:\n')
-        resultssummaryfile.write(doubletab(unpublishedcounts.to_string()) + "\n\n"
+        resultssummaryfile.write(doubletab(unpublishedcounts.to_string()) + "\n\n")
         publishedcounts = publishedcombined['admin_privileges'].value_counts()
         resultssummaryfile.write('Admin privileges for published datasets:\n')
-        resultssummaryfile.write(doubletab(publishedcounts.to_string()) + "\n\n"
+        resultssummaryfile.write(doubletab(publishedcounts.to_string()) + "\n\n")
 
     resultssummaryfile.write("\n")
     resultssummaryfile.write(singletab("RUN TIME") + "\n")
@@ -1017,12 +1053,8 @@ with open("outputs/" + todayDate + "/all_results_summary.txt", "a") as resultssu
     try: #handles if one category of dataset is not processed
         writelog("")
         writelog("PROCESSING COMPLETED SUCCESSFULLY")
-        # writelog("      total datasets evaluated: " + str(processedpublisheddatasets) + "\n")
-        writelog(singletab("stage 1 pass count: ") + str(passcount) + "\n")
-        # writelog("      stage 2 mitigating factor dataset count: " + str(mitigatingfactordatasetcount) + "\n")
-        writelog(singletab("stage 3 needs review count: ") + str(needsreviewcount) + "\n")
-        # writelog("      insufficient privileges to process: " + str(insufficientprivilegestoprocesscount) + "\n")
         writelog("")
         writelog(singletab("minutes elapsed = ")+ m + ":" + sstr + "  \n")
+
     except Exception as e:
-        pass
+        writelog("ERROR: " + str(e))

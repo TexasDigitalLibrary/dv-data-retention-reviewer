@@ -241,7 +241,7 @@ if config["processdeaccessioneddatasets"]:
 
         writelog(deaccessionedqueryurl)
 
-        deaccessioneddatasetlist = requests.get(deaccessionedqueryurl, headers={"X-Dataverse-key":config['dataverse_api_key']})
+        deaccessioneddatasetlist = requests.get(deaccessionedqueryurl, headers={"X-Dataverse-key":config['dataverse_api_token']})
 
         try:
             deaccessioneddata = json.loads(deaccessioneddatasetlist.text)['data']
@@ -336,7 +336,7 @@ if config["processpublisheddatasets"]:
 
             writelog(publisheddataqueryurl)
 
-            publisheddatasetlist = requests.get(publisheddataqueryurl, headers={"X-Dataverse-key":config['dataverse_api_key']})
+            publisheddatasetlist = requests.get(publisheddataqueryurl, headers={"X-Dataverse-key":config['dataverse_api_token']})
             response = publisheddatasetlist.json()
 
             if not response.get('data') or not response['data'].get('items'):
@@ -390,8 +390,8 @@ if config["processpublisheddatasets"]:
             minor = publisheddatasetinfo['minorVersion']
             version = float(f"{major}.{minor}")
             datasetsizevaluegb = ""
-            uniquedownloads = ""
-            totalcitations = ""
+            uniquedownloads = 0
+            totalcitations = 0
             fundinginfo = ""
             datalicense = ""
             latestversionstate = ""
@@ -423,7 +423,7 @@ if config["processpublisheddatasets"]:
             writelog("yearssincelastupdated = " + str(yearssincelastupdated))
 
             try:
-                datasetinfo = requests.get("https://dataverse.tdl.org/api/datasets/:persistentId/versions?persistentId=" + doi, headers={"X-Dataverse-key":config['dataverse_api_key']})
+                datasetinfo = requests.get("https://dataverse.tdl.org/api/datasets/:persistentId/versions?persistentId=" + doi, headers={"X-Dataverse-key":config['dataverse_api_token']})
                 data = json.loads(datasetinfo.text)['data']
                 for entry in data:
                         for k, v in entry.items():
@@ -497,7 +497,7 @@ if config["processpublisheddatasets"]:
 
                 try:
                     writelog("starting to retrieve citation count data...")
-                    citationsrequest = requests.get("https://dataverse.tdl.org/api/datasets/:persistentId/makeDataCount/citations?persistentId=" + doi)
+                    citationsrequest = requests.get("https://dataverse.tdl.org/api/datasets/:persistentId/makeDataCount/citations?persistentId=" + doi, headers={"X-Dataverse-key":config['dataverse_api_token']})
                     writelog(citationsrequest.content.decode("latin-1"))
 
                     citationsresponse = json.loads(citationsrequest.content.decode("latin-1"))
@@ -505,23 +505,27 @@ if config["processpublisheddatasets"]:
                     try:
                         citations = str(citationsresponse["data"]["citations"])
 
+                    except json.JSONDecodeError as jsonerror:
+                        print(f"JSON decoding failed: {jsonerror}. Check to make sure that you submitted a valid TDR API token with your request.")
+                        print("Raw response text was:", response.text)
+
                     except Exception as e:
-                        writelog("ERROR: citations information could not be be derived from JSON response, value set to 0 by default")
-                        citations = "0"
+                        writelog("citations information could not be be derived from JSON response, value set to 0 by default")
+                        citations = 0
 
                     if int(totalcitations) > int(config['mitigatingfactormincitationcount']):
                         mitigatingfactorpresent = True
 
                 except Exception as e:
-                    totalcitations = "0"
-                    writelog("GENERAL ERROR: citation information could not be retrieved from https://dataverse.tdl.org/api/datasets/:persistentId/makeDataCount/citations?persistentId=" + doi)
+                    totalcitations = 0
+                    writelog("GENERAL ERROR: citation information could not be retrieved from https://dataverse.tdl.org/api/datasets/:persistentId/makeDataCount/citations?persistentId=" + doi +  ", headers={\"X-Dataverse-key\":config['dataverse_api_token']}")
                     writelog("   SPECIFIC ERROR: " + str(e))
 
 
 
                 try:
                     writelog("starting to retrieve unique download count data...")
-                    uniquedownloadsrequest = requests.get("https://dataverse.tdl.org/api/datasets/:persistentId/makeDataCount/downloadsUnique?persistentId=" + doi)
+                    uniquedownloadsrequest = requests.get("https://dataverse.tdl.org/api/datasets/:persistentId/makeDataCount/downloadsUnique?persistentId=" + doi, headers={"X-Dataverse-key":config['dataverse_api_token']})
 
                     writelog(uniquedownloadsrequest.content.decode("latin-1"))
                     uniquedownloadsresponse = json.loads(uniquedownloadsrequest.content.decode("latin-1"))
@@ -530,15 +534,19 @@ if config["processpublisheddatasets"]:
                         uniquedownloads = str(uniquedownloadsresponse["data"]["downloadsUnique"])
 
                     except Exception as e:
-                        writelog("ERROR: uniquedownloads information could not be be derived from JSON response, value set to 0 by default")
-                        uniquedownloads = "0"
+                        writelog("uniquedownloads information could not be be derived from JSON response, value set to 0 by default")
+                        uniquedownloads = 0
 
                     if int(uniquedownloads) > int(config['mitigatingfactormindownloadcount']):
                         mitigatingfactorpresent = True
 
+                except json.JSONDecodeError as jsonerror:
+                    print(f"JSON decoding failed: {jsonerror}. Check to make sure that you submitted a valid TDR API token with your request.")
+                    print("Raw response text was:", response.text)
+
                 except Exception as e:
-                    uniquedownloads = "0"
-                    writelog("GENERAL ERROR: uniquedownloads information could not be retrieved from https://dataverse.tdl.org/api/datasets/:persistentId/makeDataCount/downloadsUnique?persistentId=" + doi)
+                    uniquedownloads = 0
+                    writelog("GENERAL ERROR: uniquedownloads information could not be retrieved from https://dataverse.tdl.org/api/datasets/:persistentId/makeDataCount/downloadsUnique?persistentId=" + doi+  ", headers={\"X-Dataverse-key\":config['dataverse_api_token']}")
                     writelog("   SPECIFIC ERROR: " + str(e))
 
             except Exception as e:
@@ -559,7 +567,7 @@ if config["processpublisheddatasets"]:
 
                     #published dataset is out of compliance, but has mitigating factors (level 2)
                     if mitigatingfactorpresent:
-                        writerowtocsv(publishedmitigatingfactorcsvpath,publishedheaderrow,"a")
+                        writerowtocsv(publishedmitigatingfactorcsvpath,datasetdetailsrow,"a")
 
                     else:
                         #published dataset is out of compliance, has no mitigating factors, and needs full review (level 3)
@@ -591,7 +599,7 @@ if config["processpublisheddatasets"]:
 
     #         writelog(publisheddataqueryurl)
 
-    #         publisheddatasetlist = requests.get(publisheddataqueryurl, headers={"X-Dataverse-key":config['dataverse_api_key']})
+    #         publisheddatasetlist = requests.get(publisheddataqueryurl, headers={"X-Dataverse-key":config['dataverse_api_token']})
     #         # response = publisheddatasetlist.json()
 
     #         publisheddata = json.loads(publisheddatasetlist.text)['data']
@@ -662,7 +670,7 @@ if config["processunpublisheddatasets"]:
 
             writelog(unpublisheddataqueryurl)
 
-            unpublisheddatasetlist = requests.get(unpublisheddataqueryurl, headers={"X-Dataverse-key":config['dataverse_api_key']})
+            unpublisheddatasetlist = requests.get(unpublisheddataqueryurl, headers={"X-Dataverse-key":config['dataverse_api_token']})
             response = unpublisheddatasetlist.json()
 
             if not response.get('data') or not response['data'].get('items'):
@@ -687,7 +695,7 @@ if config["processunpublisheddatasets"]:
 
             # writelog("https://dataverse.tdl.org/api/mydata/retrieve?role_ids=" + ROLE_IDS + "&dvobject_types=" +DVOBJECT_TYPES + "&published_states=" +PUBLISHED_STATES + "&selected_page=" + str(currentpageofresults))
 
-            # unpublisheddatasetlist = requests.get("https://dataverse.tdl.org/api/mydata/retrieve?role_ids=" + ROLE_IDS + "&dvobject_types=" + DVOBJECT_TYPES + "&published_states=" + PUBLISHED_STATES + "&selected_page=" + str(currentpageofresults), headers={"X-Dataverse-key":config['dataverse_api_key']})
+            # unpublisheddatasetlist = requests.get("https://dataverse.tdl.org/api/mydata/retrieve?role_ids=" + ROLE_IDS + "&dvobject_types=" + DVOBJECT_TYPES + "&published_states=" + PUBLISHED_STATES + "&selected_page=" + str(currentpageofresults), headers={"X-Dataverse-key":config['dataverse_api_token']})
 
             # unpublisheddata = json.loads(unpublisheddatasetlist.text)['data']
 
@@ -766,13 +774,13 @@ if config["processunpublisheddatasets"]:
         writelog("yearssincelastupdated = " + str(yearssincelastupdated))
 
 
-        # datasetsizerequest = requests.get("https://dataverse.tdl.org/api/datasets/" + str(entityid) + "/storagesize", headers={"X-Dataverse-key":config['dataverse_api_key']})
+        # datasetsizerequest = requests.get("https://dataverse.tdl.org/api/datasets/" + str(entityid) + "/storagesize", headers={"X-Dataverse-key":config['dataverse_api_token']})
         # datasizemessage = str(json.loads(datasetsizerequest.text)['data'])
         # datasetsizevaluegb = float(int(datasizemessage.split("dataset:")[1].split(" bytes")[0].strip().replace(",","")) / 1000000000)
         # writelog("size = " + str(round(datasetsizevaluegb,3) + " GB"))
 
         try:
-            datasetinfo = requests.get("https://dataverse.tdl.org/api/datasets/:persistentId/versions/:draft?persistentId=" + doi, headers={"X-Dataverse-key":config['dataverse_api_key']})
+            datasetinfo = requests.get("https://dataverse.tdl.org/api/datasets/:persistentId/versions/:draft?persistentId=" + doi, headers={"X-Dataverse-key":config['dataverse_api_token']})
             writelog(json.loads(datasetinfo.text)['data'])
             for k,v in json.loads(datasetinfo.text)['data'].items():
                 if type(v) is dict:
@@ -960,7 +968,7 @@ if config['crossvalidate'] and sys.platform == "win32":
                 # deaccessionedqueryurl = "https://dataverse.tdl.org/api/mydata/retrieve?role_ids=" + ROLE_IDS + "&dvobject_types=" +DVOBJECT_TYPES + "&published_states=" +PUBLISHED_STATES + "&selected_page=" + str(currentpageofresults)
 
                 #substituting search endpoint
-                publisheddatasetslist = requests.get("https://dataverse.tdl.org/api/mydata/retrieve?role_ids=" + ROLE_IDS + "&dvobject_types=" + DVOBJECT_TYPES + "&published_states=" + PUBLISHED_STATES + "&selected_page=" + str(currentpageofresults), headers={"X-Dataverse-key":config['dataverse_api_key']})
+                publisheddatasetslist = requests.get("https://dataverse.tdl.org/api/mydata/retrieve?role_ids=" + ROLE_IDS + "&dvobject_types=" + DVOBJECT_TYPES + "&published_states=" + PUBLISHED_STATES + "&selected_page=" + str(currentpageofresults), headers={"X-Dataverse-key":config['dataverse_api_token']})
 
                 publisheddata = json.loads(publisheddatasetslist.text)['data']
                 print(publisheddata['start'])

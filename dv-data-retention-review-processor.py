@@ -214,6 +214,15 @@ writerowtocsv(couldnotbeevaluatedcsvpath,publishedheaderrow,"w")
 
 
 
+#confirm Dataverse API token has been provided in .env file_path
+try:
+    config['dataverse_api_token']
+
+except Exception as e:
+    writelog("ERROR: problem reading dataverse_api_token parameter value from .env file - please make sure this is correctly defined")
+    sys.exit(1)
+
+
 writelog("Starting TDR Data Retention review process at " + datetime.now().strftime("%Y-%m-%d__%H:%M:%S"))
 
 writelog("all major script parameters defined successfully\n")
@@ -317,8 +326,9 @@ if config["processdeaccessioneddatasets"]:
 if config["processpublisheddatasets"]:
     writelog("STARTING TO PROCESS PUBLISHED DATASETS \n\n")
     publisheddatasetcounter = 0
-    passcount = 0
-    needsreviewcount = 0
+    passingdatasetcount = 0
+    needsreviewdatasetcount = 0
+    mitigatingfactordatasetcount = 0
     currentpageofresults = 0
     pagecount = config['paginationlimit']
 
@@ -559,7 +569,7 @@ if config["processpublisheddatasets"]:
                 #published dataset is in compliance with dataset retention criteria because it is smaller than size threshold and below years since creation threshold (level 1)
                 if yearssincelastupdated < float(config['publisheddatasetreviewthresholdinyears']) and datasetsizevaluegb < float(config['publisheddatasetreviewthresholdingb']):
                     writerowtocsv(publishednoreviewneededcsvpath, datasetdetailsrow, "a")
-                    passcount += 1
+                    passingdatasetcount += 1
 
 
                 #published dataset is NOT in compliance with dataset retention criteria because it is larger than size threshold and over years since creation threshold (level 1)
@@ -568,11 +578,12 @@ if config["processpublisheddatasets"]:
                     #published dataset is out of compliance, but has mitigating factors (level 2)
                     if mitigatingfactorpresent:
                         writerowtocsv(publishedmitigatingfactorcsvpath,datasetdetailsrow,"a")
+                        mitigatingfactordatasetcount += 1
 
                     else:
                         #published dataset is out of compliance, has no mitigating factors, and needs full review (level 3)
                         writerowtocsv(publishedneedsreviewcsvpath, datasetdetailsrow, "a")
-                        needsreviewcount += 1
+                        needsreviewdatasetcount += 1
 
             except Exception as e:
                 writelog("ERROR: " + str(e))
@@ -584,9 +595,9 @@ if config["processpublisheddatasets"]:
     with open("outputs/" + todayDate + "/all_results_summary.txt", "a") as resultssummaryfile:
         resultssummaryfile.write(singletab("PUBLISHED DATASETS") + "\n")
         resultssummaryfile.write(doubletab("number evaluated: ") + str(publisheddatasetcounter) + "\n")
-        resultssummaryfile.write(doubletab("count of PUBLISHED datasets in full data retention compliance (level 1): ") + str(passcount) + "\n")
-        resultssummaryfile.write(doubletab("count of PUBLISHED datasets out of compliance but with mitigating factors (level 2): ") + str(needsreviewcount) + "\n\n")
-        resultssummaryfile.write(doubletab("count of PUBLISHED datasets out of compliance and needing review (level 3): ") + str(needsreviewcount) + "\n\n")
+        resultssummaryfile.write(doubletab("count of PUBLISHED datasets in full data retention compliance (level 1): ") + str(passingdatasetcount) + "\n")
+        resultssummaryfile.write(doubletab("count of PUBLISHED datasets out of compliance but with mitigating factors (level 2): ") + str(mitigatingfactordatasetcount) + "\n\n")
+        resultssummaryfile.write(doubletab("count of PUBLISHED datasets out of compliance and needing review (level 3): ") + str(needsreviewdatasetcount) + "\n\n")
 
     writelog("\n\nFINISHED PROCESSING PUBLISHED DATASETS\n\n")
 
@@ -657,8 +668,8 @@ if config["processunpublisheddatasets"]:
     PUBLISHED_STATES = "Draft"
 
     unpublisheddatasetcounter = 0
-    passcount = 0
-    needsreviewcount = 0
+    passingdatasetcount = 0
+    needsreviewdatasetcount = 0
     currentpageofresults = 0
     pagesize = config['pagesize']
     pageincrement = config['pageincrement']
@@ -828,13 +839,13 @@ if config["processunpublisheddatasets"]:
             #unpublished dataset does not need review
             if yearssincecreation < float(config['unpublisheddatasetreviewthresholdinyears']) and datasetsizevaluegb < float(config['unpublisheddatasetreviewthresholdingb']):
                 writerowtocsv(unpublishednoreviewneededcsvpath, datasetdetailsrow, "a")
-                passcount += 1
+                passingdatasetcount += 1
 
 
             #unpublished dataset does need to be reviewed
             else:
                 writerowtocsv(unpublishedneedsreviewcsvpath, datasetdetailsrow, "a")
-                needsreviewcount += 1
+                needsreviewdatasetcount += 1
         except Exception as e:
             writelog("ERROR: " + str(e))
         writelog("\n\n")
@@ -844,8 +855,8 @@ if config["processunpublisheddatasets"]:
     with open("outputs/" + todayDate + "/all_results_summary.txt", "a") as resultssummaryfile:
         resultssummaryfile.write(singletab("UNPUBLISHED DATASETS") + "\n")
         resultssummaryfile.write(doubletab("number evaluated: ") + str(unpublisheddatasetcounter) + "\n")
-        resultssummaryfile.write(doubletab("count of UNPUBLISHED datasets in full data retention compliance (level 1): ") + str(passcount) + "\n")
-        resultssummaryfile.write(doubletab("count of UNPUBLISHED datasets out of compliance and needing review (level 3): ") + str(needsreviewcount) + "\n\n")
+        resultssummaryfile.write(doubletab("count of UNPUBLISHED datasets in full data retention compliance (level 1): ") + str(passingdatasetcount) + "\n")
+        resultssummaryfile.write(doubletab("count of UNPUBLISHED datasets out of compliance and needing review (level 3): ") + str(needsreviewdatasetcount) + "\n\n")
 
 
     writelog("\n\nFINISHED PROCESSING UNPUBLISHED DATASETS\n\n")
